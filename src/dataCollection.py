@@ -210,7 +210,51 @@ class Reclaim:
 		else:
 			return
 		return
+	
+	def fix_locations(self):
+		# Create a global list of all possible locations in the UK
+		self.global_locales = self.all_crimes[['location.street.name',
+									  'location.latitude',
+									  'location.longitude',
+									  'constituincy',
+									  'pretty name']]
+		self.global_locales = self.global_locales[~self.global_locales['location.street.name'].str.contains('|'.join(ignore))]
+		self.global_locales.drop_duplicates(subset = ['pretty name'], inplace = True)
+		self.global_locales.reset_index(inplace = True, drop = True)
 		
+		modified_crimes = self.all_crimes
+		self.test = []
+		for i in trange(0, modified_crimes.shape[0]):
+			street = modified_crimes.iloc[i][7]
+			
+			for x in ignore:
+				if x in street:
+					#print(street)
+					locales = self.global_locales.loc[self.global_locales['constituincy'] == modified_crimes.iloc[i][12]]
+					local_lat = modified_crimes.iloc[i][5]
+					local_lon = modified_crimes.iloc[i][8]
+					min_distance = 1000000
+					min_distance_index = -1
+					for j in range(0, locales.shape[0]):
+						point_lat = locales.iloc[j][1]
+						point_lon = locales.iloc[j][2]
+						distance = sqrt((local_lat - point_lat)**2 + (local_lon - point_lon)**2)
+						if distance < min_distance:
+							min_distance = distance
+							min_distance_index = j
+					new_street = locales.iloc[min_distance_index][0]
+					#modified_crimes.iat[i, 11] = new_street + ' - ' + modified_crimes.iloc[i][12]
+					self.all_crimes.iat[i, 11] = new_street + ' - ' + modified_crimes.iloc[i][12]
+					self.all_crimes.iat[i, 7] = new_street
+					#print(modified_crimes.iat[i, 11])
+					self.test.append(i)
+					
+		#self.all_crimes = modified_crimes
+		#print(modified_crimes.iat[self.test[0], 11])
+		#print(self.all_crimes.iat[self.test[0], 11])
+	
+	
+	
 	### GET, SET AND CLEAR FUNCTIONS ###
 	def get_file_name(self):
 		return self.file_name
