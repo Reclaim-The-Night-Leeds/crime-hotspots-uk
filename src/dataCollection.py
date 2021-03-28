@@ -39,7 +39,7 @@ ignore = ['On or near Parking Area',
 		  'On or near Police Station']
 
 class Reclaim:
-	def __init__(self, update = False, file_name = 'constituincies.geojson'):
+	def __init__(self, update = False, file_name = 'src/constituincies.geojson'):
 		self.file_name = file_name
 		
 		if not self.load_constituincy_boundaries() or update == True:
@@ -66,9 +66,8 @@ class Reclaim:
 	def update_constituincy_boundaries(self, file_name = 'DEADBEEF'):
 		if file_name == 'DEADBEEF':
 			file_name = self.file_name
-		
 		link = 'https://opendata.arcgis.com/datasets/b64677a2afc3466f80d3d683b71c3468_0.geojson'
-	
+		
 		with open(file_name, "wb") as f:
 			print("Downloading %s" % file_name)
 			response = requests.get(link, stream=True)
@@ -104,7 +103,7 @@ class Reclaim:
 			print('file does not exist')
 			return False
 		
-	def get_data(self, constituincies, start_date, end_date, crime_type):
+	def get_data(self, constituincies, crime_type):
 		boundaries = {}
 		for i in constituincies:
 			if i not in self.constituincies:
@@ -157,19 +156,19 @@ class Reclaim:
 			location = location + temp
 		
 		location = location[:-1]
-	
-	
-		start_date = date(2018,2,1)   # start date
+		
+		
+		start_date = date(2018,3,1)   # start date
 		end_date = date(2021,2,1)   # end date
-	
+		
 		dates = pd.date_range(start_date,
 							  end_date-timedelta(days=1),
 							  freq='MS').strftime("%Y-%m").tolist()
-	
+		
 		baseURL = "https://data.police.uk/api/crimes-street/"
-	
+		
 		crime_jsons = []
-	
+		
 		for i in tqdm(dates, leave = False, desc = "Months"):
 			url = baseURL + crimeType + "?poly=" + location + "&date=" + str(i)
 			payload={}
@@ -201,7 +200,8 @@ class Reclaim:
 		
 			crimes['location.latitude'] = pd.to_numeric(crimes['location.latitude'])
 			crimes['location.longitude'] = pd.to_numeric(crimes['location.longitude'])
-			crimes['location.street.name'] = crimes['location.street.name'] + " - " +str(constituincy)
+			crimes['pretty name'] = crimes['location.street.name'] + " - " +str(constituincy)
+			crimes['constituincy'] = str(constituincy)
 			
 			crimes.reset_index(inplace = True)
 			crimes.drop(['index', 'context', 'category'], axis = 1, inplace = True)
