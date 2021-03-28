@@ -210,7 +210,78 @@ class Reclaim:
 		else:
 			return
 		return
+	
+	def fix_locations(self):
+		# Create a global list of all possible locations in the UK
+		self.global_locales = self.all_crimes[['location.street.name',
+									  'location.latitude',
+									  'location.longitude',
+									  'constituincy',
+									  'pretty name']]
+		self.global_locales = self.global_locales[~self.global_locales['location.street.name'].str.contains('|'.join(ignore))]
+		self.global_locales.drop_duplicates(subset = ['pretty name'], inplace = True)
+		self.global_locales.reset_index(inplace = True, drop = True)
 		
+		modified_crimes = self.all_crimes
+		self.test = []
+		for i in trange(0, modified_crimes.shape[0]):
+			street = modified_crimes.iloc[i][7]
+			
+			for x in ignore:
+				if x in street:
+					#print(street)
+					locales = self.global_locales.loc[self.global_locales['constituincy'] == modified_crimes.iloc[i][12]]
+					local_lat = modified_crimes.iloc[i][5]
+					local_lon = modified_crimes.iloc[i][8]
+					min_distance = 1000000
+					min_distance_index = -1
+					for j in range(0, locales.shape[0]):
+						point_lat = locales.iloc[j][1]
+						point_lon = locales.iloc[j][2]
+						distance = sqrt((local_lat - point_lat)**2 + (local_lon - point_lon)**2)
+						if distance < min_distance:
+							min_distance = distance
+							min_distance_index = j
+					new_street = locales.iloc[min_distance_index][0]
+					#modified_crimes.iat[i, 11] = new_street + ' - ' + modified_crimes.iloc[i][12]
+					self.all_crimes.iat[i, 11] = new_street + ' - ' + modified_crimes.iloc[i][12]
+					self.all_crimes.iat[i, 7] = new_street
+					#print(modified_crimes.iat[i, 11])
+					self.test.append(i)
+					
+		#self.all_crimes = modified_crimes
+		#print(modified_crimes.iat[self.test[0], 11])
+		#print(self.all_crimes.iat[self.test[0], 11])
+	
+	
+	def hotspots_graph(self, top, location):
+		if self.global_locales.empty:
+			raise NameError('global_locales is not defined, try running fix_locations()')
+		
+		self.locations = self.all_crimes['pretty name'].value_counts()[:top].to_frame()
+		self.locations.reset_index(inplace = True)
+		self.locations.columns = ['locations', 'frequency']
+		
+		sns.set(font_scale = 4)
+		
+		fig, ax = plt.subplots(figsize=(40,40))
+		bars = sns.barplot(y = self.locations['locations'], x = 'frequency', ax = ax, data = self.locations, orient = 'h')
+		
+		title = 'Number of reported ' + str(self.crime_type) + ' crimes in locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
+		
+		ax.set_title(title)
+		for p in ax.patches:
+			height = p.get_height() # height of each horizontal bar is the same
+			width = p.get_width() # width (average number of passengers)
+			# adding text to each bar
+			ax.text(x = width+1, # x-coordinate position of data label, padded 3 to right of bar
+			y = p.get_y()+(height/2), # # y-coordinate position of data label, padded to be in the middle of the bar
+			s = '{:.0f}'.format(width), # data label, formatted to ignore decimals
+			va = 'center') # sets vertical alignment (va) to center
+			fig.tight_layout()
+			fig.savefig('locationFrequency.jpeg')
+	
+	
 	### GET, SET AND CLEAR FUNCTIONS ###
 	def get_file_name(self):
 		return self.file_name
