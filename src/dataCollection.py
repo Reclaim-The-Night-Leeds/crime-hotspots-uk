@@ -254,6 +254,33 @@ class Reclaim:
 		#print(self.all_crimes.iat[self.test[0], 11])
 	
 	
+	def hotspots_graph(self, top, location):
+		if self.global_locales.empty:
+			raise NameError('global_locales is not defined, try running fix_locations()')
+		
+		self.locations = self.all_crimes['pretty name'].value_counts()[:top].to_frame()
+		self.locations.reset_index(inplace = True)
+		self.locations.columns = ['locations', 'frequency']
+		
+		sns.set(font_scale = 4)
+		
+		fig, ax = plt.subplots(figsize=(40,40))
+		bars = sns.barplot(y = self.locations['locations'], x = 'frequency', ax = ax, data = self.locations, orient = 'h')
+		
+		title = 'Number of reported ' + str(self.crime_type) + ' crimes in locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
+		
+		ax.set_title(title)
+		for p in ax.patches:
+			height = p.get_height() # height of each horizontal bar is the same
+			width = p.get_width() # width (average number of passengers)
+			# adding text to each bar
+			ax.text(x = width+1, # x-coordinate position of data label, padded 3 to right of bar
+			y = p.get_y()+(height/2), # # y-coordinate position of data label, padded to be in the middle of the bar
+			s = '{:.0f}'.format(width), # data label, formatted to ignore decimals
+			va = 'center') # sets vertical alignment (va) to center
+			fig.tight_layout()
+			fig.savefig('locationFrequency.jpeg')
+	
 	
 	### GET, SET AND CLEAR FUNCTIONS ###
 	def get_file_name(self):
