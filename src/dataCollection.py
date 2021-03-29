@@ -24,9 +24,11 @@ from shapely.geometry import shape, GeometryCollection, Polygon, box, LineString
 from shapely.ops import split
 from scipy.spatial import Voronoi, voronoi_plot_2d
 
+baseURL = "https://data.police.uk/api/"
+
 ignore = ['On or near Parking Area',
 		  'On or near Shopping Area',
-		  'On or near Sports/recreation Area',
+		  'On or near Sports/Recreation Area',
 		  'On or near Supermarket',
 		  'On or near Petrol Station',
 		  'On or near Nightclub',
@@ -36,11 +38,20 @@ ignore = ['On or near Parking Area',
 		  'On or near Hospital',
 		  'On or near Conference/exhibition Centre',
 		  'On or near Theatre/concert Hall',
-		  'On or near Police Station']
+		  'On or near Police Station',
+		  'On or near Airport/Airfield',
+		  'On or near Park/Open Space']
 
 class Reclaim:
-	def __init__(self, update = False, file_name = 'src/constituincies.geojson'):
+	def __init__(self, update = False, file_name = 'src/constituincies.geojson', usage = 'crime'):
 		self.file_name = file_name
+		
+		if usage == 'crime':
+			self.usage = 'crime-street'
+		elif usage == 'search':
+			self.usage = 'stops-street'
+		else:
+			assert False, 'usage argument should be either "crime" or "search"'
 		
 		if not self.load_constituincy_boundaries() or update == True:
 			print('updating boundaries')
@@ -170,7 +181,7 @@ class Reclaim:
 		crime_jsons = []
 		
 		for i in tqdm(dates, leave = False, desc = "Months"):
-			url = baseURL + crimeType + "?poly=" + location + "&date=" + str(i)
+			url = self.url_gen(location, i)
 			payload={}
 			headers = {}
 		
@@ -204,7 +215,9 @@ class Reclaim:
 			crimes['constituincy'] = str(constituincy)
 			
 			crimes.reset_index(inplace = True)
-			crimes.drop(['index', 'context', 'category'], axis = 1, inplace = True)
+			
+			if self.usage == 'crime-street':
+				crimes.drop(['index', 'context', 'category'], axis = 1, inplace = True)
 		
 			return crimes
 		else:
@@ -224,15 +237,22 @@ class Reclaim:
 		
 		modified_crimes = self.all_crimes
 		self.test = []
+		
+		street_id_loc = modified_crimes.columns.get_loc('location.street.name')
+		latitude_id_loc = modified_crimes.columns.get_loc('location.latitude')
+		longitude_id_loc = modified_crimes.columns.get_loc('location.longitude')
+		constituincy_id_loc = modified_crimes.columns.get_loc('constituincy')
+		pretty_id_loc = modified_crimes.columns.get_loc('pretty name')
+		
 		for i in trange(0, modified_crimes.shape[0]):
-			street = modified_crimes.iloc[i][7]
+			street = modified_crimes.iloc[i][street_id_loc]
 			
 			for x in ignore:
 				if x in street:
 					#print(street)
-					locales = self.global_locales.loc[self.global_locales['constituincy'] == modified_crimes.iloc[i][12]]
-					local_lat = modified_crimes.iloc[i][5]
-					local_lon = modified_crimes.iloc[i][8]
+					locales = self.global_locales.loc[self.global_locales['constituincy'] == modified_crimes.iloc[i][constituincy_id_loc]]
+					local_lat = modified_crimes.iloc[i][latitude_id_loc]
+					local_lon = modified_crimes.iloc[i][longitude_id_loc]
 					min_distance = 1000000
 					min_distance_index = -1
 					for j in range(0, locales.shape[0]):
@@ -244,8 +264,8 @@ class Reclaim:
 							min_distance_index = j
 					new_street = locales.iloc[min_distance_index][0]
 					#modified_crimes.iat[i, 11] = new_street + ' - ' + modified_crimes.iloc[i][12]
-					self.all_crimes.iat[i, 11] = new_street + ' - ' + modified_crimes.iloc[i][12]
-					self.all_crimes.iat[i, 7] = new_street
+					self.all_crimes.iat[i, pretty_id_loc] = new_street + ' - ' + modified_crimes.iloc[i][constituincy_id_loc]
+					self.all_crimes.iat[i, street_id_loc] = new_street
 					#print(modified_crimes.iat[i, 11])
 					self.test.append(i)
 					
@@ -267,8 +287,11 @@ class Reclaim:
 		fig, ax = plt.subplots(figsize=(40,40))
 		bars = sns.barplot(y = self.locations['locations'], x = 'frequency', ax = ax, data = self.locations, orient = 'h')
 		
-		title = 'Number of reported ' + str(self.crime_type) + ' crimes in locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
-		
+		if self.usage == 'crime-street':
+			title = 'Number of reported ' + str(self.crime_type) + ' crimes in locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
+		else:
+			title = 'Number of stop and searches at locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
+			
 		ax.set_title(title)
 		for p in ax.patches:
 			height = p.get_height() # height of each horizontal bar is the same
@@ -314,3 +337,10 @@ class Reclaim:
 					continue
 				result.append(g)
 		return result
+	
+	def url_gen(self, location, date):
+		if self.usage == 'crime-street':
+			url = baseURL + self.usage + '/' + crimeType + "?poly=" + location + "&date=" + str(date)
+		else:
+			url = baseURL + self.usage + "?poly=" + location + "&date=" + str(date)
+		return url
