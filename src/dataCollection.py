@@ -115,6 +115,7 @@ class Reclaim:
 			return False
 		
 	def get_data(self, constituincies, crime_type):
+		self.crime_type = crime_type
 		boundaries = {}
 		for i in constituincies:
 			if i not in self.constituincies:
