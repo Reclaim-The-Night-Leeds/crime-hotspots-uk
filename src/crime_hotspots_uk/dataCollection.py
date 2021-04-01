@@ -1,12 +1,13 @@
 import numpy as np
+
 import pandas as pd
+from pandas import json_normalize
 
 from pathlib import Path
 
 from tqdm.auto import trange, tqdm
 
 import requests
-from pandas import json_normalize
 import json
 
 from datetime import date, timedelta
@@ -20,9 +21,7 @@ from scipy import stats
 
 import sys
 
-from shapely.geometry import shape, GeometryCollection, Polygon, box, LineString, Point
-from shapely.ops import split
-from scipy.spatial import Voronoi, voronoi_plot_2d
+from shapely.geometry import shape, GeometryCollection, Polygon
 
 baseURL = "https://data.police.uk/api/"
 
