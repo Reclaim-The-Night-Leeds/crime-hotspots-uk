@@ -2,19 +2,14 @@
 This is a skeleton file that can serve as a starting point for a Python
 console script. To run this script uncomment the following lines in the
 ``[options.entry_points]`` section in ``setup.cfg``::
-
     console_scripts =
-         fibonacci = crime_hotspots_uk.skeleton:run
-
+         fibonacci = demo_project.skeleton:run
 Then run ``pip install .`` (or ``pip install -e .`` for editable mode)
 which will install the command ``fibonacci`` inside your current environment.
-
 Besides console scripts, the header (i.e. until ``_logger``...) of this file can
 also be used as template for Python modules.
-
 Note:
     This skeleton file can be safely removed if not needed!
-
 References:
     - https://setuptools.readthedocs.io/en/latest/userguide/entry_point.html
     - https://pip.pypa.io/en/stable/reference/pip_install
@@ -24,10 +19,10 @@ import argparse
 import logging
 import sys
 
-from crime_hotspots_uk import __version__
+from demo_project import __version__
 
-__author__ = "George Sykes"
-__copyright__ = "George Sykes"
+__author__ = "John Doe"
+__copyright__ = "John Doe"
 __license__ = "MIT"
 
 _logger = logging.getLogger(__name__)
@@ -36,16 +31,14 @@ _logger = logging.getLogger(__name__)
 # ---- Python API ----
 # The functions defined in this section can be imported by users in their
 # Python scripts/interactive interpreter, e.g. via
-# `from crime_hotspots_uk.skeleton import fib`,
+# `from demo_project.skeleton import fib`,
 # when using this Python module as a library.
 
 
 def fib(n):
     """Fibonacci example function
-
     Args:
       n (int): integer
-
     Returns:
       int: n-th Fibonacci number
     """
@@ -64,11 +57,9 @@ def fib(n):
 
 def parse_args(args):
     """Parse command line parameters
-
     Args:
       args (List[str]): command line parameters as list of strings
           (for example  ``["--help"]``).
-
     Returns:
       :obj:`argparse.Namespace`: command line parameters namespace
     """
@@ -76,7 +67,7 @@ def parse_args(args):
     parser.add_argument(
         "--version",
         action="version",
-        version="crime-hotspots-uk {ver}".format(ver=__version__),
+        version="demo-project {ver}".format(ver=__version__),
     )
     parser.add_argument(dest="n", help="n-th Fibonacci number", type=int, metavar="INT")
     parser.add_argument(
@@ -100,7 +91,6 @@ def parse_args(args):
 
 def setup_logging(loglevel):
     """Setup basic logging
-
     Args:
       loglevel (int): minimum loglevel for emitting messages
     """
@@ -112,10 +102,8 @@ def setup_logging(loglevel):
 
 def main(args):
     """Wrapper allowing :func:`fib` to be called with string arguments in a CLI fashion
-
     Instead of returning the value from :func:`fib`, it prints the result to the
     ``stdout`` in a nicely formated message.
-
     Args:
       args (List[str]): command line parameters as list of strings
           (for example  ``["--verbose", "42"]``).
@@ -129,7 +117,6 @@ def main(args):
 
 def run():
     """Calls :func:`main` passing the CLI arguments extracted from :obj:`sys.argv`
-
     This function can be used as entry point to create console scripts with setuptools.
     """
     main(sys.argv[1:])
@@ -144,6 +131,6 @@ if __name__ == "__main__":
     # After installing your project with pip, users can also run your Python
     # modules as scripts via the ``-m`` flag, as defined in PEP 338::
     #
-    #     python -m crime_hotspots_uk.skeleton 42
+    #     python -m demo_project.skeleton 42
     #
     run()
