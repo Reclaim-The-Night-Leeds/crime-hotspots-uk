@@ -21,7 +21,7 @@ from scipy import stats
 
 import sys
 
-from shapely.geometry import shape, GeometryCollection, Polygon
+from shapely.geometry import shape, GeometryCollection, Polygon, box
 
 baseURL = "https://data.police.uk/api/"
 
