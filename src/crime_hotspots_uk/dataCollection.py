@@ -46,7 +46,7 @@ class Reclaim:
 		self.file_name = file_name
 		
 		if usage == 'crime':
-			self.usage = 'crime-street'
+			self.usage = 'crimes-street'
 		elif usage == 'search':
 			self.usage = 'stops-street'
 		else:
@@ -160,7 +160,7 @@ class Reclaim:
 		self.all_crimes = pd.concat(crimes)
 	
 	def get_crimes(self, coords, crimeType, constituincy):
-	
+		self.crimeType = crimeType
 		location = ''
 		for i in range(0,len(coords)):
 			temp = str(coords[i][1])[0:9] + "," + str(coords[i][0])[0:9] + ":"
@@ -216,7 +216,7 @@ class Reclaim:
 			
 			crimes.reset_index(inplace = True)
 			
-			if self.usage == 'crime-street':
+			if self.usage == 'crimes-street':
 				crimes.drop(['index', 'context', 'category'], axis = 1, inplace = True)
 		
 			return crimes
@@ -287,7 +287,7 @@ class Reclaim:
 		fig, ax = plt.subplots(figsize=(40,40))
 		bars = sns.barplot(y = self.locations['locations'], x = 'frequency', ax = ax, data = self.locations, orient = 'h')
 		
-		if self.usage == 'crime-street':
+		if self.usage == 'crimes-street':
 			title = 'Number of reported ' + str(self.crime_type) + ' crimes in locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
 		else:
 			title = 'Number of stop and searches at locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
@@ -339,8 +339,8 @@ class Reclaim:
 		return result
 	
 	def url_gen(self, location, date):
-		if self.usage == 'crime-street':
-			url = baseURL + self.usage + '/' + crimeType + "?poly=" + location + "&date=" + str(date)
+		if self.usage == 'crimes-street':
+			url = baseURL + self.usage + '/' + self.crimeType + "?poly=" + location + "&date=" + str(date)
 		else:
 			url = baseURL + self.usage + "?poly=" + location + "&date=" + str(date)
 		return url
