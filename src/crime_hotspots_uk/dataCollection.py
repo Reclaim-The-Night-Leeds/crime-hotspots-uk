@@ -21,7 +21,7 @@ import sys
 
 from shapely.geometry import shape, GeometryCollection, Polygon, box
 
-from constants import baseURL, crime_categories_url, constituincies_url, ignore
+from .constants import baseURL, crime_categories_url, constituincies_url, ignore
 
 class Reclaim:
 	def __init__(self, 
