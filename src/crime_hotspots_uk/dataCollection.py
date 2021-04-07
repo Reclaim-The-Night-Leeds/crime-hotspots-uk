@@ -17,8 +17,6 @@ from matplotlib import pyplot as plt
 
 from math import sqrt
 
-from scipy import stats
-
 import sys
 
 from shapely.geometry import shape, GeometryCollection, Polygon, box
