@@ -17,36 +17,21 @@ from matplotlib import pyplot as plt
 
 from math import sqrt
 
-from scipy import stats
-
 import sys
 
-from shapely.geometry import shape, GeometryCollection, Polygon
+from shapely.geometry import shape, GeometryCollection, Polygon, box
 
-baseURL = "https://data.police.uk/api/"
-
-ignore = ['On or near Parking Area',
-		  'On or near Shopping Area',
-		  'On or near Sports/Recreation Area',
-		  'On or near Supermarket',
-		  'On or near Petrol Station',
-		  'On or near Nightclub',
-		  'On or near Pedestrian Subway',
-		  'On or near Further/higher Educational Building',
-		  'On or near Bus/coach Station',
-		  'On or near Hospital',
-		  'On or near Conference/exhibition Centre',
-		  'On or near Theatre/concert Hall',
-		  'On or near Police Station',
-		  'On or near Airport/Airfield',
-		  'On or near Park/Open Space']
+from constants import baseURL, crime_categories_url, constituincies_url, ignore
 
 class Reclaim:
-	def __init__(self, update = False, file_name = 'src/constituincies.geojson', usage = 'crime'):
+	def __init__(self, 
+				update = False, 
+				file_name = 'src/constituincies.geojson', 
+				usage = 'crime'):
 		self.file_name = file_name
 		
 		if usage == 'crime':
-			self.usage = 'crime-street'
+			self.usage = 'crimes-street'
 		elif usage == 'search':
 			self.usage = 'stops-street'
 		else:
@@ -63,7 +48,7 @@ class Reclaim:
 		for i in range(0,len(self.gj)):
 			self.constituincies.append(self.gj[i]['properties']['pcon18nm'])
 			
-		url = "https://data.police.uk/api/crime-categories?date=2011-08"
+		url = crime_categories_url
 		payload={}
 		files={}
 		headers = {}
@@ -76,7 +61,7 @@ class Reclaim:
 	def update_constituincy_boundaries(self, file_name = 'DEADBEEF'):
 		if file_name == 'DEADBEEF':
 			file_name = self.file_name
-		link = 'https://opendata.arcgis.com/datasets/b64677a2afc3466f80d3d683b71c3468_0.geojson'
+		link = constituincies_url
 		
 		with open(file_name, "wb") as f:
 			print("Downloading %s" % file_name)
@@ -160,7 +145,7 @@ class Reclaim:
 		self.all_crimes = pd.concat(crimes)
 	
 	def get_crimes(self, coords, crimeType, constituincy):
-	
+		self.crimeType = crimeType
 		location = ''
 		for i in range(0,len(coords)):
 			temp = str(coords[i][1])[0:9] + "," + str(coords[i][0])[0:9] + ":"
@@ -216,7 +201,7 @@ class Reclaim:
 			
 			crimes.reset_index(inplace = True)
 			
-			if self.usage == 'crime-street':
+			if self.usage == 'crimes-street':
 				crimes.drop(['index', 'context', 'category'], axis = 1, inplace = True)
 		
 			return crimes
@@ -287,7 +272,7 @@ class Reclaim:
 		fig, ax = plt.subplots(figsize=(40,40))
 		bars = sns.barplot(y = self.locations['locations'], x = 'frequency', ax = ax, data = self.locations, orient = 'h')
 		
-		if self.usage == 'crime-street':
+		if self.usage == 'crimes-street':
 			title = 'Number of reported ' + str(self.crime_type) + ' crimes in locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
 		else:
 			title = 'Number of stop and searches at locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
@@ -339,8 +324,8 @@ class Reclaim:
 		return result
 	
 	def url_gen(self, location, date):
-		if self.usage == 'crime-street':
-			url = baseURL + self.usage + '/' + crimeType + "?poly=" + location + "&date=" + str(date)
+		if self.usage == 'crimes-street':
+			url = baseURL + self.usage + '/' + self.crimeType + "?poly=" + location + "&date=" + str(date)
 		else:
 			url = baseURL + self.usage + "?poly=" + location + "&date=" + str(date)
 		return url
