@@ -21,23 +21,7 @@ import sys
 
 from shapely.geometry import shape, GeometryCollection, Polygon, box
 
-baseURL = "https://data.police.uk/api/"
-
-ignore = ['On or near Parking Area',
-		  'On or near Shopping Area',
-		  'On or near Sports/Recreation Area',
-		  'On or near Supermarket',
-		  'On or near Petrol Station',
-		  'On or near Nightclub',
-		  'On or near Pedestrian Subway',
-		  'On or near Further/higher Educational Building',
-		  'On or near Bus/coach Station',
-		  'On or near Hospital',
-		  'On or near Conference/exhibition Centre',
-		  'On or near Theatre/concert Hall',
-		  'On or near Police Station',
-		  'On or near Airport/Airfield',
-		  'On or near Park/Open Space']
+from constants import baseURL, crime_categories_url, constituincies_url, ignore
 
 class Reclaim:
 	def __init__(self, update = False, file_name = 'src/constituincies.geojson', usage = 'crime'):
@@ -61,7 +45,7 @@ class Reclaim:
 		for i in range(0,len(self.gj)):
 			self.constituincies.append(self.gj[i]['properties']['pcon18nm'])
 			
-		url = "https://data.police.uk/api/crime-categories?date=2011-08"
+		url = crime_categories_url
 		payload={}
 		files={}
 		headers = {}
@@ -74,7 +58,7 @@ class Reclaim:
 	def update_constituincy_boundaries(self, file_name = 'DEADBEEF'):
 		if file_name == 'DEADBEEF':
 			file_name = self.file_name
-		link = 'https://opendata.arcgis.com/datasets/b64677a2afc3466f80d3d683b71c3468_0.geojson'
+		link = constituincies_url
 		
 		with open(file_name, "wb") as f:
 			print("Downloading %s" % file_name)
