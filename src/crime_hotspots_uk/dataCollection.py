@@ -24,7 +24,10 @@ from shapely.geometry import shape, GeometryCollection, Polygon, box
 from constants import baseURL, crime_categories_url, constituincies_url, ignore
 
 class Reclaim:
-	def __init__(self, update = False, file_name = 'src/constituincies.geojson', usage = 'crime'):
+	def __init__(self, 
+				update = False, 
+				file_name = 'src/constituincies.geojson', 
+				usage = 'crime'):
 		self.file_name = file_name
 		
 		if usage == 'crime':
