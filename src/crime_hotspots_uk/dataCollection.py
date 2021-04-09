@@ -17,6 +17,7 @@ from datetime import date, timedelta
 
 import seaborn as sns
 from matplotlib import pyplot as plt
+from textwrap import wrap
 
 from math import sqrt
 
@@ -410,6 +411,7 @@ class Reclaim:
 			for x in ignore:
 				# If the current street contains a non descriptive name then
 				if x in street:
+					
 					# Get the name of the constituincy of the current street
 					constituincy = modified_crimes.iloc[i][constituincy_id_loc]
 					
@@ -458,7 +460,9 @@ class Reclaim:
 							min_distance_index = j
 					
 					# Check if no locale closer than 1000000 was found
-					assert min_distance_index > 0
+					if min_distance_index < 0:
+						print(street)
+						print(x)
 					
 					# Get the name of the new street and create the new pretty
 					# name
@@ -508,7 +512,6 @@ class Reclaim:
 		# locations
 		self.locations = self.crime_list['pretty name'].value_counts()[:top]
 		self.locations = self.locations.to_frame()
-		top = len(np.unique(self.locations['pretty name']))
 		
 		# Reset the index and rename the columns
 		self.locations.reset_index(inplace = True)
@@ -516,6 +519,10 @@ class Reclaim:
 		
 		# Set the seaborn font scale
 		sns.set(font_scale = 4)
+		
+		# Set it so the number listed in the title is the same as the number of
+		# bars on the graph
+		top = len(self.locations['frequency'])
 		
 		# Create a barplot of the hotspots
 		fig, ax = plt.subplots(figsize=(40,40))
@@ -532,7 +539,8 @@ class Reclaim:
 		else:
 			title = 'Number of stop and searches at locations within ' + str(location) + ' since 2018, top ' + str(top) + ' locations'
 		
-		# Set the graph title
+		# Set the graph title to wrap
+		title = "\n".join(wrap(title, 60))
 		ax.set_title(title)
 		
 		# Add data labels to the bats
