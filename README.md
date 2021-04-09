@@ -1,6 +1,8 @@
 # Crime Hotspots UK
 A python module that identifies and produces graphs of assult hotspots within the UK.
 
+For full documentation click [here](https://crime-hotspots-uk.readthedocs.io/en/latest/?)
+
 ## About
 This module has been programmed by organisers of Reclaim The Night Leeds. We hope it will be a useful tool for feminist and political activism groups in the UK. We do not necessarily any groups who have used this software.
 
