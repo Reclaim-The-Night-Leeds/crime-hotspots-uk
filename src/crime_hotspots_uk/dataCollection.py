@@ -471,13 +471,15 @@ class Reclaim:
 					self.all_crimes.iat[i, type_id_loc] = street
 					
 	
-	def hotspots_graph(self, top, location):
+	def hotspots_graph(self, top, location, location_type = ['All']):
 		""" Draw a bargraph of the rates of assult at the top hotspots
 		
 		:param top: how many hotspots to plot, for instance 10 would show the top 10 hotspots
 		:type top: int
 		:param location: Wehre the title of the graph should say the data is from
 		:type location: string
+		:param location_type: Type of location to make the graph for, must be a list of location types, each entry must be either `Street` or value in the ignore list in constants.py. You can also pass `All` to select all crimes. The default value is `All`
+		:type location_type: list (optional)
 		"""
 		
 		# Check if fix locations has been run yet, this graph only produces 
@@ -485,10 +487,28 @@ class Reclaim:
 		if self.global_locales.empty:
 			self.fix_locations()
 		
+		# Check if the location type input is valid
+		for x in location_type:
+			assert x == 'Street' or x == 'All' or (x in ignore)
+		
+		# If the location_type was ['All'] set 
+		if location_type == ['All']:
+			location_type = ignore
+			location_type.append('Street')
+		
+		search = ('|'.join(location_type))
+		print('List of locations: ', location_type)
+		print('Search term: ', search)
+		# Create a mask of all the crimes that happened at the given location type
+		mask = self.all_crimes['Type'].str.contains(search)
+		
+		self.crime_list = self.all_crimes.loc[mask]
+		
 		# Create a pandas datafram containing the frequency counts of the top
 		# locations
-		self.locations = self.all_crimes['pretty name'].value_counts()[:top]
+		self.locations = self.crime_list['pretty name'].value_counts()[:top]
 		self.locations = self.locations.to_frame()
+		top = len(np.unique(self.locations['pretty name']))
 		
 		# Reset the index and rename the columns
 		self.locations.reset_index(inplace = True)
