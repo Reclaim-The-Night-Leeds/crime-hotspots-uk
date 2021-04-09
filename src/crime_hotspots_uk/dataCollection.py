@@ -347,6 +347,7 @@ class Reclaim:
 			
 			# Add a column with the constituincy that the data is from
 			crimes['constituincy'] = str(constituincy)
+			crimes['Type'] = 'Street'
 			
 			# Reset the index to number all entries from 0 to length of the data
 			crimes.reset_index(inplace = True, drop = True)
@@ -398,6 +399,7 @@ class Reclaim:
 		longitude_id_loc = modified_crimes.columns.get_loc('location.longitude')
 		constituincy_id_loc = modified_crimes.columns.get_loc('constituincy')
 		pretty_id_loc = modified_crimes.columns.get_loc('pretty name')
+		type_id_loc = modified_crimes.columns.get_loc('Type')
 		
 		# Loop through all the crimes in the dataset
 		for i in trange(0, modified_crimes.shape[0]):
@@ -466,6 +468,7 @@ class Reclaim:
 					# Set the names in the crimes dataframe to the new names
 					self.all_crimes.iat[i, pretty_id_loc] = pretty_name
 					self.all_crimes.iat[i, street_id_loc] = new_street
+					self.all_crimes.iat[i, type_id_loc] = street
 					
 	
 	def hotspots_graph(self, top, location):
