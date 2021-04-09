@@ -1,23 +1,13 @@
 # crime-hotspots-uk
 
-Add a short description here!
+Hello, This is the official documentation for the Crime Hotspots UK anausis software.
 
-
-## Note
-
-> This is the main page of your project's [Sphinx] documentation. It is
-> formatted in [Markdown]. Add additional pages by creating md-files in
-> `docs` or rst-files (formated in [reStructuredText]) and adding links to
-> them in the `Contents` section below.
->
-> Please check [Sphinx], [recommonmark] and [autostructify] for more information
-> about how to document your project and how to configure your preferences.
-
+The software is programed by [Reclaim The Night Leeds] but is open for use by anyone.
 
 ## Contents
 
 * [Overview](readme)
-* [License](license)
+* [License](LICENSE)
 * [Authors](authors)
 * [Changelog](changelog)
 * [Module Reference](api/modules)
@@ -30,7 +20,7 @@ Add a short description here!
 * :ref:`modindex`
 * :ref:`search`
 ```
-
+[Reclaim The Night Leeds]
 [Sphinx]: http://www.sphinx-doc.org/
 [Markdown]: https://daringfireball.net/projects/markdown/
 [reStructuredText]: http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html

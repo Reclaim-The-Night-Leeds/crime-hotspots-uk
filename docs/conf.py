@@ -21,7 +21,7 @@ __location__ = os.path.join(
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.join(__location__, "../src"))
+sys.path.insert(0, os.path.join(__location__, "../src/crime-hotspots-uk/"))
 
 # -- Run sphinx-apidoc -------------------------------------------------------
 # This hack is necessary since RTD does not issue `sphinx-apidoc` before running
@@ -99,6 +99,13 @@ def setup(app):
     }
     app.add_config_value("recommonmark_config", params, True)
     app.add_transform(AutoStructify)
+    app.connect("autodoc-skip-member", skip)
+
+# Ensure that __init__ functions are always documented
+def skip(app, what, name, obj, would_skip, options):
+    if name == "__init__":
+        return False
+    return would_skip
 
 
 # Enable markdown
@@ -173,10 +180,7 @@ html_theme = "sphinx_rtd_theme"
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-html_theme_options = {
-    "sidebar_width": "300px",
-    "page_width": "1200px"
-}
+html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -191,7 +195,7 @@ else:
     release = version
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-# html_short_title = None
+html_short_title = 'Crime Hotspots UK Docs'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
