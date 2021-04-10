@@ -1,5 +1,4 @@
 import generic
-import geopandas as gpd
 
 class constituincy(generic.Locations):
     """

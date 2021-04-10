@@ -1,4 +1,4 @@
-
+import geopandas as gpd
 
 class Locations:
     """
