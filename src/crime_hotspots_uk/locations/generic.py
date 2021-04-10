@@ -26,7 +26,9 @@ class Locations:
         .. warning:: This function should always be overwritten
         """
         
-        
+        # Raise an import_not_overwritten error to indicate that 
+        # the program has got here and should terminate
+        raise import_not_overwritten()
         
     def get_area(self, location_name):
         """
@@ -46,4 +48,18 @@ class Locations:
         :type file_name: string
         """
         
-        
+
+class import_not_overwritten(Exception):
+    """Exception raised when the generic import function is called. This normally means we haven't yet finished implementing this particular location type
+
+    Attributes:
+        salary -- input salary which caused the error
+        message -- explanation of the error
+    """
+
+    def __init__(self, message="Import function has not been overwritten"):
+        self.message = message
+        super().__init__(self.message)
+
+
+
