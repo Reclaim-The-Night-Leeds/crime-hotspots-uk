@@ -63,13 +63,3 @@ class constituincy(generic.Locations):
                 bar.update(size)
             file.close() # Make sure to close the file after
         
-        
-    def load_constituincy_boundaries(self, file_name = 'DEADBEEF'):
-        """ Load in the constituincy boundaries from a specified file.
-        
-        :param file_name: Path to a cached copy of the constituincies.geojson file. If nothing is passed it will default to DEADBEEF and take whatever file name is stored in the file_name member variable, defaults to self.file_name
-        :type update: string, optional
-        
-        :return: Will return true if it managed to successfully download and validate the constituincy boundaries. If it fails to it will return false.
-        :rtype: bool
-        """
