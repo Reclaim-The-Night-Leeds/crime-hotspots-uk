@@ -4,22 +4,24 @@ from pathlib import Path
 import requests
 from tqdm.auto import trange, tqdm
 import geopandas as gpd
+from shapely.geometry.polygon import Polygon
+from shapely.geometry.multipolygon import MultiPolygon
 
 class constituincy(generic.Locations):
     """
     This class is used to hold a dataframe of constituincy boundaries and any relevant data. Any data pertaining to a perticular constituincy including demographics or political representation should be implemented here.
     """
     
-    def __init__(self, name):
+    def __init__(self, name, file_name = 'constituincies.geojson', update = False):
         super()
         
         # Set the name of the class to the name passed
         self.name = name
         
         # Run the import function
-        self._import_()
-    
-    def _import_(self, file_name = 'constituincies.geojson', update = True):
+        self._import_(file_name = file_name, update = update)
+        
+    def _import_(self, file_name, update):
         """
         Import boundary data for the constituincy
         """
@@ -27,7 +29,9 @@ class constituincy(generic.Locations):
         # Checks if it is neccesary to download new constituincy boundaries by 
         # checking if either the file name for the boundaries doesn't exist or
         # if update has been set to True'
-        if not Path(file_name).is_file() or update == True:
+        file_exists = Path(file_name).is_file()
+        file_exists = not file_exists
+        if file_exists or update:
             print('updating boundaries')
             # If it is needed to update the boundaries run the update function
             self.update_constituincy_boundaries(file_name)
@@ -71,5 +75,5 @@ class constituincy(generic.Locations):
             for data in resp.iter_content(chunk_size=1024):
                 size = file.write(data)
                 bar.update(size)
-            file.close() # Make sure to close the file after
+        file.close() # Make sure to close the file after
         
