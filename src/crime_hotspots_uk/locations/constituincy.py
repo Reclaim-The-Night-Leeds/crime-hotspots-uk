@@ -1,4 +1,5 @@
 import generic
+import geopandas as gpd
 
 class constituincy(generic.Locations):
     """
@@ -8,11 +9,31 @@ class constituincy(generic.Locations):
     def __init__(self, name):
         super().__init__(name)
     
-    def _import_(self):
+    def _import_(self, file_name = 'constituincies.geojson', update = True):
         """
         Import boundary data for the constituincy
         """
-    
+        
+        # Checks if it is neccesary to download new constituincy boundaries by 
+        # checking if either the file name for the boundaries doesn't exist or
+        # if update has been set to True'
+        if not self.load_constituincy_boundaries() or update == True:
+            print('updating boundaries')
+            # If it is needed to update the boundaries run the update function
+            self.update_constituincy_boundaries()
+            # Check that the boundaries correctly updated
+            if not self.load_constituincy_boundaries():
+                print("Failed to get constituincies")
+        
+        
+        self.locations = gpd.read_file(file_name)
+        for i in range(0, len(testing['geometry'])):
+            if type(testing['geometry'][i]) == Polygon:
+                multi = MultiPolygon([testing['geometry'][i]])
+            else:
+                multi = testing['geometry'][i]
+            testing.iat[i, 9] = multi
+        
     def update_constituincy_boundaries(self, file_name = 'DEADBEEF'):
         """ This downloads ne constituincy boundary data from the `ONS GeoPortal <https://geoportal.statistics.gov.uk/datasets/5ce27b980ffb43c39b012c2ebeab92c0_2>`_ This contains the 2018 westminster parkimentary boundaries for the UK.
         
