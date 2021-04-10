@@ -7,8 +7,37 @@
     Learn more under: https://pyscaffold.org/
 """
 from setuptools import setup
+from shutil import rmtree
+import os
+
+
+def create_directory_structure():
+    replace = True
+    
+    home = os.path.expanduser("~")
+    
+    if os.path.exists(home + '/.crime_hotspots_cache'):
+        print('Installer detected existing cache directory')
+        print('Do you want to replace the existing cache [y/n]: ')
+        cache_test = input()
+        if cache_test == 'n' or cache_test == 'N':
+            replace = False
+        elif cache_test != 'y' or cache_test != 'Y':
+            raise Exception('You did not enter either y/Y/n/N')
+    
+    if replace:
+        if os.path.exists(home + '/.crime_hotspots_cache'):
+            rmtree(home + '/.crime_hotspots_cache')
+        
+        os.mkdir(home + '/.crime_hotspots_cache')
+        os.mkdir(home + '/.crime_hotspots_cache/political')
+        os.mkdir(home + '/.crime_hotspots_cache/police')
+
 
 if __name__ == "__main__":
+    
+    create_directory_structure()
+    
     try:
         setup(use_scm_version={"version_scheme": "no-guess-dev"})
     except:  # noqa
@@ -19,3 +48,4 @@ if __name__ == "__main__":
             "   pip install -U setuptools setuptools_scm wheel\n\n"
         )
         raise
+        
