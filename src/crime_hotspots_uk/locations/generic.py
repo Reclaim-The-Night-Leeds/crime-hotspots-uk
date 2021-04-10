@@ -13,8 +13,11 @@ class Locations:
         :param name: What the name of collection of locations is called. For instance Leeds constituincies. This should be human readable and provide a concise explanation of what the boundaries represent.
         :type name: string 
         """
+        # Set the name of the class to the name passed
+        self.name = name
         
-        
+        # Run the import function
+        self._import_()
         
     def _import_(self):
         """
