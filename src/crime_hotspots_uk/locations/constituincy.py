@@ -26,12 +26,12 @@ class constituincy(generic.Locations):
         
         
         self.locations = gpd.read_file(file_name)
-        for i in range(0, len(testing['geometry'])):
-            if type(testing['geometry'][i]) == Polygon:
-                multi = MultiPolygon([testing['geometry'][i]])
+        for i in range(0, len(self.locations['geometry'])):
+            if type(self.locations['geometry'][i]) == Polygon:
+                multi = MultiPolygon([self.locations['geometry'][i]])
             else:
-                multi = testing['geometry'][i]
-            testing.iat[i, 9] = multi
+                multi = self.locations['geometry'][i]
+            self.locations.iat[i, 9] = multi
         
     def update_constituincy_boundaries(self, file_name = 'DEADBEEF'):
         """ This downloads ne constituincy boundary data from the `ONS GeoPortal <https://geoportal.statistics.gov.uk/datasets/5ce27b980ffb43c39b012c2ebeab92c0_2>`_ This contains the 2018 westminster parkimentary boundaries for the UK.
