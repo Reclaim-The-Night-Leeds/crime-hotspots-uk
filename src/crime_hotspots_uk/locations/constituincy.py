@@ -7,7 +7,7 @@ import geopandas as gpd
 from shapely.geometry.polygon import Polygon
 from shapely.geometry.multipolygon import MultiPolygon
 
-class constituincy(generic.Locations):
+class Constituincy(generic.Locations):
     """
     This class is used to hold a dataframe of constituincy boundaries and any relevant data. Any data pertaining to a perticular constituincy including demographics or political representation should be implemented here.
     """
