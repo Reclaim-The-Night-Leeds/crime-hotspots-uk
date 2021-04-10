@@ -61,7 +61,7 @@ class Locations:
                 # Return the output list
                 return output
                 
-        
+        raise location_not_found(location_name, self.name)
         
     def export(self, filename):
         """
@@ -82,6 +82,20 @@ class import_not_overwritten(Exception):
 
     def __init__(self, message="Import function has not been overwritten"):
         self.message = message
+        super().__init__(self.message)
+        
+class location_not_found(Exception):
+    """Exception raised when the class is asked to find a location that is not in its datafreame
+    
+    :param name: Name of the location it was trying to find (For instance `Leeds North West`)
+    :type name: string
+    :param collection_name: Name of the class it was searching in (for instance `Leeds`)
+    :type collection_name: string
+    
+    """
+
+    def __init__(self, name, collection_name):
+        self.message = "Class tried to find a location that did not exist in the known locations. The locations was " + name + " and was looked for in " + collection_name
         super().__init__(self.message)
 
 
