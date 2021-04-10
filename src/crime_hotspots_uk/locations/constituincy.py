@@ -1,5 +1,9 @@
 import generic
 from crime_hotspots_uk.constants import baseURL, crime_categories_url, constituincies_url, ignore
+from pathlib import Path
+import requests
+from tqdm.auto import trange, tqdm
+import geopandas as gpd
 
 class constituincy(generic.Locations):
     """
@@ -7,7 +11,13 @@ class constituincy(generic.Locations):
     """
     
     def __init__(self, name):
-        super().__init__(name)
+        super()
+        
+        # Set the name of the class to the name passed
+        self.name = name
+        
+        # Run the import function
+        self._import_()
     
     def _import_(self, file_name = 'constituincies.geojson', update = True):
         """
@@ -17,12 +27,12 @@ class constituincy(generic.Locations):
         # Checks if it is neccesary to download new constituincy boundaries by 
         # checking if either the file name for the boundaries doesn't exist or
         # if update has been set to True'
-        if not self.load_constituincy_boundaries() or update == True:
+        if not Path(file_name).is_file() or update == True:
             print('updating boundaries')
             # If it is needed to update the boundaries run the update function
-            self.update_constituincy_boundaries()
+            self.update_constituincy_boundaries(file_name)
             # Check that the boundaries correctly updated
-            if not self.load_constituincy_boundaries():
+            if not Path(file_name).is_file():
                 print("Failed to get constituincies")
         
         
