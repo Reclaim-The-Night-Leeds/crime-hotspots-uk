@@ -70,7 +70,8 @@ class Locations:
         :param file_name: What to save the file as
         :type file_name: string
         """
-        
+        # export the file to a CSV file
+        self.locations.to_csv(file_name)
 
 class import_not_overwritten(Exception):
     """Exception raised when the generic import function is called. This normally means we haven't yet finished implementing this particular location type
