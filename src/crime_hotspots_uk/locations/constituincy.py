@@ -39,13 +39,18 @@ class constituincy(generic.Locations):
             if not Path(file_name).is_file():
                 print("Failed to get constituincies")
         
-        
+        # Load the geojson into a file
         self.locations = gpd.read_file(file_name)
+        
+        # Loop through all locations found
         for i in range(0, len(self.locations['geometry'])):
+            # Convert any single polygons into multipolygons
             if type(self.locations['geometry'][i]) == Polygon:
                 multi = MultiPolygon([self.locations['geometry'][i]])
             else:
                 multi = self.locations['geometry'][i]
+            
+            # Replace the single polygons with the multi's
             self.locations.iat[i, 9] = multi
         
     def update_constituincy_boundaries(self, file_name):
