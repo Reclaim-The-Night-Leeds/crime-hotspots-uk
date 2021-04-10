@@ -38,6 +38,29 @@ class Locations:
         :type location_name: string
         """
         
+        # Get the column index of the rows containing the names of the locations
+        # and of the shapely geometry objects
+        name_coord = self.locations.columns.get_loc('Name')
+        geometry_coord = self.locations.columns.get_loc('Geometry')
+        
+        # Loop through all the rows in the dataframe
+        for index in range(0, self.locations.shape[0]):
+            # If the current name matches that of the passed location name
+            if self.locations.shape.iloc[index][name_coord] == location_name:
+                # Create turn the multipolygon entry into a list of polygons
+                targets = list(self.locations.shape.iloc[index][geometry_coord])
+                
+                # Create a template output list to hold the final coordinates
+                output = []
+                
+                # Loop through the extracted polygons
+                for target in targets:
+                    # Add their coordinate lists to the output list
+                    output.append(coords.exterior.coords)
+                
+                # Return the output list
+                return output
+                
         
         
     def export(self, filename):
