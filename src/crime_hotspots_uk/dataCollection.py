@@ -26,6 +26,7 @@ import sys
 from shapely.geometry import shape, GeometryCollection, Polygon, box
 
 from crime_hotspots_uk.constants import baseURL, crime_categories_url, constituincies_url, ignore
+from locations.constituincy import Constituincy
 
 class Reclaim:
     """ This class handles all downloading and processing of the data.
@@ -63,24 +64,8 @@ class Reclaim:
         else:
             assert False, 'usage argument should be either "crime" or "search"'
         
-        # Checks if it is neccesary to download new constituincy boundaries by 
-        # checking if either the file name for the boundaries doesn't exist or
-        # if update has been set to True'
-        if not self.load_constituincy_boundaries() or update == True:
-            print('updating boundaries')
-            # If it is needed to update the boundaries run the update function
-            self.update_constituincy_boundaries()
-            # Check that the boundaries correctly updated
-            if not self.load_constituincy_boundaries():
-                print("Failed to get constituincies")
+        self.consitituincies = Constituincy('Constituincies')
         
-        # Prepare a list to hold the names of all the constituincies 
-        self.constituincies = []
-        
-        # Iterare trhough all the downloaded constituincies and extract their
-        # name
-        for i in range(0,len(self.gj)):
-            self.constituincies.append(self.gj[i]['properties']['pcon18nm'])
         
         # Update the local list of potential crime types by pulling from https://data.police.uk/docs/method/crime-categories/ 
         url = crime_categories_url
@@ -152,6 +137,7 @@ class Reclaim:
                 # Attempt to load it into json object.
                 try:
                     self.gj = json.load(f)["features"]
+                    self.test = f
                 # An json.JSONDecodeError will be raised if the file is
                 #incorrectly formatted when this happens return False
                 except json.JSONDecodeError:
