@@ -42,6 +42,9 @@ class Constituincy(generic.Locations):
         # Load the geojson into a file
         self.locations = gpd.read_file(file_name)
         
+        geometry_id_loc = self.locations.columns.get_loc('geometry')
+        
+        
         # Loop through all locations found
         for i in range(0, len(self.locations['geometry'])):
             # Convert any single polygons into multipolygons
@@ -54,24 +57,25 @@ class Constituincy(generic.Locations):
                 multi = MultiPolygon(multi)
                 
             # Replace the single polygons with the multi's
-            self.locations.iat[i, 9] = multi
+            self.locations.iat[i, geometry_id_loc] = multi
             
-            self.locations.columns = ['id', 
-                                      'ONS ID', 
-                                      'name',
-                                      'bng_e',
-                                      'bng_n',
-                                      'lon',
-                                      'lat',
-                                      'st_areashape',
-                                      'st_lengthshape',
-                                      'geometry']
-            self.locations.drop(['id', 
-                                 'bng_e', 
-                                 'bng_n', 
-                                 'st_areashape', 
-                                 'st_lengthshape',],
-                                 inplace = True)
+        self.locations.columns = ['id', 
+                                  'ONS ID', 
+                                  'name',
+                                  'bng_e',
+                                  'bng_n',
+                                  'lon',
+                                  'lat',
+                                  'st_areashape',
+                                  'st_lengthshape',
+                                  'geometry']
+        self.locations.drop(['id', 
+                             'bng_e', 
+                             'bng_n', 
+                             'st_areashape', 
+                             'st_lengthshape',],
+                             inplace = True,
+                             axis = 1)
             
             
             
@@ -105,17 +109,18 @@ class Constituincy(generic.Locations):
         file.close() # Make sure to close the file after
     
     
-    def _get_commons_data(self):
+    def _get_commons_data(self, name):
         """
         Use this function to get any relevant data from the commons library API
         """
         
-        url = "https://members-api.parliament.uk/api/Location/Constituency/Search?searchText=Leeds Central"
+        url = "https://members-api.parliament.uk/api/Location/Constituency/Search?searchText=" + name
         
-        payload={}
-        headers = {}
+        response = requests.request("GET", url).json()
         
-        response = requests.request("GET", url, headers=headers, data=payload)
+        name   = response['items'][0]['value']['currentRepresentation']['member']['value']['nameDisplayAs']
+        gender = response['items'][0]['value']['currentRepresentation']['member']['value']['gender']
+        party  = response['items'][0]['value']['currentRepresentation']['member']['value']['latestParty']['name']
         
-        print(response.text)
+        return name, gender, party
 
