@@ -64,7 +64,7 @@ class Reclaim:
         else:
             assert False, 'usage argument should be either "crime" or "search"'
         
-        self.consitituincies = Constituincy('Constituincies')
+        self.locations = Constituincy('Constituincies')
         
         
         # Update the local list of potential crime types by pulling from https://data.police.uk/docs/method/crime-categories/ 
@@ -97,62 +97,27 @@ class Reclaim:
         assert crime_type in self.crime_types.keys()
         self.crime_type = crime_type
         
-        # Create a dictionary to store all the boundaries
-        boundaries = {}
+        search = ('|'.join(constituincies))
+        # Create a mask of all the crimes that happened at the given location type
+        mask = self.locations.locations['name'].str.contains(search)
         
-        # Iterate over all the constituincies that where passed to the function
-        for i in constituincies:
-            # If any constituincy is not in the list of known constituincies
-            # return false
-            if i not in self.constituincies:
-                print('Unknown constituincy')
-                return False
-            # Otherwise loop through the boundary data and extract the data for
-            # the constituincies we want
-            else:
-                # Loop through boundaries
-                for j in range(0,len(self.gj)):
-                    # Check if the current boundary has the correct name
-                    if self.gj[j]['properties']['pcon18nm'] == i:
-                        # If it does add a new key to the boundaries for the 
-                        # constituincies latitude and longitude coordinates
-                        boundaries[i] = self.gj[j]['geometry']['coordinates']
-        
-        # Create a dictionary to hold the areas that will be downloaded
-        self.areas = {}
-        
-        # Create a list to hold the names of weirdly shaped constituincies
-        self.weird = []
-        
-        # Iterate through all the boundaries
-        for i in boundaries:
-            # Try to process all boundaries (there are a  number that fail as
-            # they are odly shaped)
-            try:
-                # Convert the list of lat/lon coordinates into a shapely polygon
-                # and then simplify it so it is a lower resoloution
-                temp = Polygon(boundaries[i][0]).simplify(0.01)
-            
-                # Add the GeometryCollection to the areas dictionary
-                self.areas[i] = temp
-                
-            except ValueError:
-                # If a polygon can't be constructed append their name to a list 
-                print('ERROR: ', i)
-                self.weird.append(i)
+        self.boundaries = self.locations.locations.loc[mask]
             
         # Create a list to hold all the crime data once its downloaded
         crimes = []
         
         # Loop through all the constituincies
-        for area in tqdm(self.areas, desc = "Areas"):
-            # Get the crimes for the current Area
-            temp = self.get_crimes(self.areas[area].exterior.coords, area)
+        for area in tqdm(self.boundaries.index, desc = "Areas"):
+            for polygon in tqdm(self.boundaries['geometry'][area], 
+                                desc = "Polygons", 
+                                leave = False):
+                # Get the crimes for the current Area
+                temp = self.get_crimes(polygon.exterior.coords, self.boundaries['name'][area])
             
-            # If the data that is retrieved is a dataframe then append it
-            # to the list of crime dataframes
-            if isinstance(temp, pd.DataFrame):
-                crimes.append(temp)
+                # If the data that is retrieved is a dataframe then append it
+                # to the list of crime dataframes
+                if isinstance(temp, pd.DataFrame):
+                    crimes.append(temp)
         
         # Convert the list of crime dataframes to one big dataframe
         self.all_crimes = pd.concat(crimes)
