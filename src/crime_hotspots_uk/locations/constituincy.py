@@ -46,10 +46,13 @@ class Constituincy(generic.Locations):
         for i in range(0, len(self.locations['geometry'])):
             # Convert any single polygons into multipolygons
             if type(self.locations['geometry'][i]) == Polygon:
-                multi = MultiPolygon([self.locations['geometry'][i]])
+                multi = MultiPolygon([self.locations['geometry'][i].simplify(0.01)])
             else:
-                multi = self.locations['geometry'][i]
-            
+                multi = []
+                for j in self.locations['geometry'][i]:
+                    multi.append(j.simplify(0.01))
+                multi = MultiPolygon(multi)
+                
             # Replace the single polygons with the multi's
             self.locations.iat[i, 9] = multi
         
