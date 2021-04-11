@@ -103,4 +103,19 @@ class Constituincy(generic.Locations):
                 size = file.write(data)
                 bar.update(size)
         file.close() # Make sure to close the file after
+    
+    
+    def _get_commons_data(self):
+        """
+        Use this function to get any relevant data from the commons library API
+        """
         
+        url = "https://members-api.parliament.uk/api/Location/Constituency/Search?searchText=Leeds Central"
+        
+        payload={}
+        headers = {}
+        
+        response = requests.request("GET", url, headers=headers, data=payload)
+        
+        print(response.text)
+
