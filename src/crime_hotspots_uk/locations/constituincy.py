@@ -55,7 +55,18 @@ class Constituincy(generic.Locations):
                 
             # Replace the single polygons with the multi's
             self.locations.iat[i, 9] = multi
-        
+            
+            self.locations.columns = ['id', 
+                                      'ONS ID', 
+                                      'name',
+                                      'bng_e',
+                                      'bng_n',
+                                      'lon',
+                                      'lat',
+                                      'st_areashape',
+                                      'st_lengthshape',
+                                      'geometry']
+            
     def update_constituincy_boundaries(self, file_name):
         """ This downloads ne constituincy boundary data from the `ONS GeoPortal <https://geoportal.statistics.gov.uk/datasets/5ce27b980ffb43c39b012c2ebeab92c0_2>`_ This contains the 2018 westminster parkimentary boundaries for the UK.
         
