@@ -30,8 +30,7 @@ def create_directory_structure():
             rmtree(home + '/.crime_hotspots_cache')
         
         os.mkdir(home + '/.crime_hotspots_cache')
-        os.mkdir(home + '/.crime_hotspots_cache/political')
-        os.mkdir(home + '/.crime_hotspots_cache/police')
+        os.mkdir(home + '/.crime_hotspots_cache/constituincies')
 
 
 if __name__ == "__main__":
