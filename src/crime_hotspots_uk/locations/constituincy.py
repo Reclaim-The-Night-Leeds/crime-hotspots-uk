@@ -3,9 +3,13 @@ from crime_hotspots_uk.constants import baseURL, crime_categories_url, constitui
 from pathlib import Path
 import requests
 from tqdm.auto import trange, tqdm
+
 import geopandas as gpd
+import pandas as pd
+
 from shapely.geometry.polygon import Polygon
 from shapely.geometry.multipolygon import MultiPolygon
+import numpy as np
 
 class Constituincy(generic.Locations):
     """
@@ -42,11 +46,12 @@ class Constituincy(generic.Locations):
         # Load the geojson into a file
         self.locations = gpd.read_file(file_name)
         
+        name_id_loc = self.locations.columns.get_loc('pcon18nm')
         geometry_id_loc = self.locations.columns.get_loc('geometry')
-        
+        mps_details = []
         
         # Loop through all locations found
-        for i in range(0, len(self.locations['geometry'])):
+        for i in trange(0, len(self.locations['geometry']), desc = 'Importing'):
             # Convert any single polygons into multipolygons
             if type(self.locations['geometry'][i]) == Polygon:
                 multi = MultiPolygon([self.locations['geometry'][i].simplify(0.01)])
@@ -55,10 +60,24 @@ class Constituincy(generic.Locations):
                 for j in self.locations['geometry'][i]:
                     multi.append(j.simplify(0.01))
                 multi = MultiPolygon(multi)
-                
+            
+            if self.locations.iloc[i, name_id_loc] == "Ynys Mon":
+                self.locations.iat[i,name_id_loc] = "Ynys Môn"
+            
             # Replace the single polygons with the multi's
             self.locations.iat[i, geometry_id_loc] = multi
             
+            #print(self.locations['pcon18nm'][i])
+            
+            details = self._get_commons_data(self.locations['pcon18nm'][i])
+            mps_details.append(details)
+        
+        mps_details = gpd.GeoDataFrame.from_records(mps_details)
+        
+        self.locations = gpd.GeoDataFrame(pd.concat([self.locations, mps_details],
+                                                    axis = 1, 
+                                                    ignore_index = True))
+        
         self.locations.columns = ['id', 
                                   'ONS ID', 
                                   'name',
@@ -68,7 +87,10 @@ class Constituincy(generic.Locations):
                                   'lat',
                                   'st_areashape',
                                   'st_lengthshape',
-                                  'geometry']
+                                  'geometry',
+                                  'mp name',
+                                  'mp gender',
+                                  'mp party']
         self.locations.drop(['id', 
                              'bng_e', 
                              'bng_n', 
@@ -77,7 +99,7 @@ class Constituincy(generic.Locations):
                              inplace = True,
                              axis = 1)
             
-            
+        return mps_details
             
     def update_constituincy_boundaries(self, file_name):
         """ This downloads ne constituincy boundary data from the `ONS GeoPortal <https://geoportal.statistics.gov.uk/datasets/5ce27b980ffb43c39b012c2ebeab92c0_2>`_ This contains the 2018 westminster parkimentary boundaries for the UK.
@@ -114,13 +136,27 @@ class Constituincy(generic.Locations):
         Use this function to get any relevant data from the commons library API
         """
         
+        temp = ''
+        for i in name:
+            if i != '.':
+                temp = temp + i
+        name = temp
+        
         url = "https://members-api.parliament.uk/api/Location/Constituency/Search?searchText=" + name
         
-        response = requests.request("GET", url).json()
+        self.response = requests.request("GET", url).json()
         
-        name   = response['items'][0]['value']['currentRepresentation']['member']['value']['nameDisplayAs']
-        gender = response['items'][0]['value']['currentRepresentation']['member']['value']['gender']
-        party  = response['items'][0]['value']['currentRepresentation']['member']['value']['latestParty']['name']
+        
+        if self.response['items'][0]['value']['currentRepresentation'] != None:
+            name   = self.response['items'][0]['value']['currentRepresentation']['member']['value']['nameDisplayAs']
+            gender = self.response['items'][0]['value']['currentRepresentation']['member']['value']['gender']
+            party  = self.response['items'][0]['value']['currentRepresentation']['member']['value']['latestParty']['name']
+        else:
+            name = 'byElection'
+            gender = 'byElection'
+            party = 'byElection'
+        
+        
         
         return name, gender, party
 
