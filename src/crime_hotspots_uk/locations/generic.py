@@ -1,4 +1,7 @@
 import geopandas as gpd
+import os
+
+home = os.path.expanduser("~")
 
 class Locations:
     """
@@ -63,13 +66,15 @@ class Locations:
                 
         raise location_not_found(location_name, self.name)
         
-    def export(self, filename):
+    def export(self, file_name):
         """
         Export the current dataframe of locations to a .csv file
         
         :param file_name: What to save the file as
         :type file_name: string
         """
+        
+        print('here')
         # export the file to a CSV file
         self.locations.to_csv(file_name)
 
