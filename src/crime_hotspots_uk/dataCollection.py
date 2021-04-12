@@ -26,7 +26,7 @@ import sys
 from shapely.geometry import shape, GeometryCollection, Polygon, box
 
 from crime_hotspots_uk.constants import baseURL, crime_categories_url, constituincies_url, ignore
-from locations.constituincy import Constituincy
+from crime_hotspots_uk.locations.constituincy import Constituincy
 
 class Reclaim:
     """ This class handles all downloading and processing of the data.
