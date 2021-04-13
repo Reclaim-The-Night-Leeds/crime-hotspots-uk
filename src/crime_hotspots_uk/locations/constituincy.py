@@ -16,7 +16,20 @@ class Constituincy(generic.Locations):
     This class is used to hold a dataframe of constituincy boundaries and any relevant data. Any data pertaining to a perticular constituincy including demographics or political representation should be implemented here.
     """
     
-    def __init__(self, name, file_name = 'constituincies.geojson', update = False):
+    def __init__(self, name, 
+                file_name = 'constituincies.geojson', 
+                update = False):
+        """
+        Initialise the class and import data
+        
+        :param name: The name to name the class, this will be used for caching purposes later
+        :type name: string
+        :param file_name: Name of the constituincies.geojson file to try and import 
+        :type file_name: string, optional
+        :param update: Wether to force an update of the boundaries
+        :type update: bool, optional
+        """
+        
         super()
         
         # Set the name of the class to the name passed
@@ -28,11 +41,16 @@ class Constituincy(generic.Locations):
     def _import_(self, file_name, update):
         """
         Import boundary data for the constituincy
+        
+        :param file_name: Name of the constituincies.geojson file to try and import 
+        :type file_name: string, optional
+        :param update: Wether to force an update of the boundaries
+        :type update: bool, optional
         """
         
         # Checks if it is neccesary to download new constituincy boundaries by 
         # checking if either the file name for the boundaries doesn't exist or
-        # if update has been set to True'
+        # if update has been set to True'a
         file_exists = Path(file_name).is_file()
         file_exists = not file_exists
         if file_exists or update:
@@ -134,29 +152,36 @@ class Constituincy(generic.Locations):
     def _get_commons_data(self, name):
         """
         Use this function to get any relevant data from the commons library API
+        
+        :param name: name of the constituincy to get data for
+        :type name: string
         """
         
+        # Check if the name has a . in it if so remove it
         temp = ''
         for i in name:
             if i != '.':
                 temp = temp + i
         name = temp
         
+        # Set the URL to query
         url = "https://members-api.parliament.uk/api/Location/Constituency/Search?searchText=" + name
         
+        # Send the request
         self.response = requests.request("GET", url).json()
         
-        
+        # Parse the response
         if self.response['items'][0]['value']['currentRepresentation'] != None:
             name   = self.response['items'][0]['value']['currentRepresentation']['member']['value']['nameDisplayAs']
             gender = self.response['items'][0]['value']['currentRepresentation']['member']['value']['gender']
             party  = self.response['items'][0]['value']['currentRepresentation']['member']['value']['latestParty']['name']
         else:
+            # If the response was that there was no MP currently then set all 
+            # values to indicate impending byelection
             name = 'byElection'
             gender = 'byElection'
             party = 'byElection'
         
-        
-        
+        # Return the name, gender and party of the representative for the 
+        # constituincy
         return name, gender, party
-
