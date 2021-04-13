@@ -1,7 +1,7 @@
 import geopandas as gpd
 import os
 
-home = os.path.expanduser("~")
+cache = os.path.expanduser("~") + '/.crime_hotspots_cache/'
 
 class Locations:
     """
@@ -66,26 +66,29 @@ class Locations:
                 
         raise location_not_found(location_name, self.name)
         
-    def export(self, file_name):
+    def export(self, file_name = 'DEADBEEF', kind = None):
         """
-        Export the current dataframe of locations to a .csv file
+        Export the current dataframe of locations to a .csv file. If no filename is passed the file will be exported to a cache directory depending on the name and type of the dataframe it comes from
         
         :param file_name: What to save the file as
         :type file_name: string
         """
-        
-        print('here')
-        # export the file to a CSV file
-        self.locations.to_csv(file_name)
+        if file_name != 'DEADBEEF':
+            # export the file to a CSV file
+            self.locations.to_csv(file_name)
+        else:
+            self.__class__.__name__
+            file_name = cache + self.__class__.__name__ + '/' + self.name + '.csv'
+            self.locations.to_csv(file_name)
 
 class import_not_overwritten(Exception):
     """Exception raised when the generic import function is called. This normally means we haven't yet finished implementing this particular location type
-
+    
     Attributes:
         salary -- input salary which caused the error
         message -- explanation of the error
     """
-
+    
     def __init__(self, message="Import function has not been overwritten"):
         self.message = message
         super().__init__(self.message)
