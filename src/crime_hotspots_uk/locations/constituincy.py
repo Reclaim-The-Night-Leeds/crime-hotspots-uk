@@ -100,11 +100,6 @@ class Constituincy(generic.Locations):
                              axis = 1)
             
         return mps_details
-        
-    
-    def export(self, file_name):
-        print('1')
-        super().export(file_name)
     
     def update_constituincy_boundaries(self, file_name):
         """ This downloads ne constituincy boundary data from the `ONS GeoPortal <https://geoportal.statistics.gov.uk/datasets/5ce27b980ffb43c39b012c2ebeab92c0_2>`_ This contains the 2018 westminster parkimentary boundaries for the UK.
