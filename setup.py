@@ -7,8 +7,27 @@
     Learn more under: https://pyscaffold.org/
 """
 from setuptools import setup
+from shutil import rmtree
+import os
+
+
+def create_directory_structure():
+    replace = True
+    
+    home = os.path.expanduser("~")
+    
+    if replace:
+        if os.path.exists(home + '/.crime_hotspots_cache'):
+            rmtree(home + '/.crime_hotspots_cache')
+        
+        os.mkdir(home + '/.crime_hotspots_cache')
+        os.mkdir(home + '/.crime_hotspots_cache/Constituincy')
+
 
 if __name__ == "__main__":
+    
+    create_directory_structure()
+    
     try:
         setup(use_scm_version={"version_scheme": "no-guess-dev"})
     except:  # noqa
@@ -19,3 +38,4 @@ if __name__ == "__main__":
             "   pip install -U setuptools setuptools_scm wheel\n\n"
         )
         raise
+        
