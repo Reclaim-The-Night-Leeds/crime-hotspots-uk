@@ -11,17 +11,16 @@ import os
 import sys
 import inspect
 import shutil
+from pathlib import Path
 
 # -- Path setup --------------------------------------------------------------
 
-__location__ = os.path.join(
-    os.getcwd(), os.path.dirname(inspect.getfile(inspect.currentframe()))
-)
+__location__ =  Path(__file__).parent
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.join(__location__, "../src/crime-hotspots-uk/"))
+sys.path.insert(0, os.path.join(__location__, "../src/"))
 
 # -- Run sphinx-apidoc -------------------------------------------------------
 # This hack is necessary since RTD does not issue `sphinx-apidoc` before running
@@ -36,8 +35,13 @@ try:  # for Sphinx >= 1.7
 except ImportError:
     from sphinx import apidoc
 
+print('*' * 10)
+print('__location__', __location__)
+print('*' * 10)
+
+
 output_dir = os.path.join(__location__, "api")
-module_dir = os.path.join(__location__, "../src/crime_hotspots_uk")
+module_dir = os.path.join(__location__, "../src/crime_hotspots_uk/")
 try:
     shutil.rmtree(output_dir)
 except FileNotFoundError:
