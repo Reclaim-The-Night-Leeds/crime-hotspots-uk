@@ -358,7 +358,7 @@ class Reclaim:
     def hotspots_graph(self, top, location, location_type = ['All']):
         """ Draw a bargraph of the rates of assult at the top hotspots
         
-        :param top: how many hotspots to plot, for instance 10 would show the top 10 hotspots
+        :param top: how many hotspots to plot, for instance 10 would show the top 10 hotspots. IF this is set to none all hotspots will be graphed.
         :type top: int
         :param location: Wehre the title of the graph should say the data is from
         :type location: string
@@ -370,6 +370,10 @@ class Reclaim:
         # valid data if the locations have been fixed
         if self.global_locales.empty:
             self.fix_locations()
+        
+        # If the value passed to top is none then it means graph all locations
+        if top == None:
+            top = len(self.all_crimes)
         
         # Check if the location type input is valid
         for x in location_type:
@@ -390,26 +394,26 @@ class Reclaim:
         
         # Create a pandas datafram containing the frequency counts of the top
         # locations
-        self.locations = self.crime_list['pretty name'].value_counts()[:top]
-        self.locations = self.locations.to_frame()
+        self.hotspots = self.crime_list['pretty name'].value_counts()[:top]
+        self.hotspots = self.hotspots.to_frame()
         
         # Reset the index and rename the columns
-        self.locations.reset_index(inplace = True)
-        self.locations.columns = ['locations', 'frequency']
+        self.hotspots.reset_index(inplace = True)
+        self.hotspots.columns = ['locations', 'frequency']
         
         # Set the seaborn font scale
         sns.set(font_scale = 4)
         
         # Set it so the number listed in the title is the same as the number of
         # bars on the graph
-        top = len(self.locations['frequency'])
+        top = len(self.hotspots['frequency'])
         
         # Create a barplot of the hotspots
         fig, ax = plt.subplots(figsize=(40,40))
-        bars = sns.barplot(y = self.locations['locations'], 
+        bars = sns.barplot(y = self.hotspots['locations'], 
                             x = 'frequency', 
                             ax = ax, 
-                            data = self.locations, 
+                            data = self.hotspots, 
                             orient = 'h')
         
         # Create the title of the chart depending on if it is crime or stop and
