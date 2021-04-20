@@ -16,21 +16,12 @@ def create_directory_structure():
     
     home = os.path.expanduser("~")
     
-    if os.path.exists(home + '/.crime_hotspots_cache'):
-        print('Installer detected existing cache directory')
-        print('Do you want to replace the existing cache [y]/n: ')
-        cache_test = input()
-        if cache_test == 'n' or cache_test == 'N':
-            replace = False
-        else:
-            replace = True
-    
     if replace:
         if os.path.exists(home + '/.crime_hotspots_cache'):
             rmtree(home + '/.crime_hotspots_cache')
         
         os.mkdir(home + '/.crime_hotspots_cache')
-        os.mkdir(home + '/.crime_hotspots_cache/constituincies')
+        os.mkdir(home + '/.crime_hotspots_cache/Constituincy')
 
 
 if __name__ == "__main__":
