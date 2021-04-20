@@ -15,3 +15,9 @@ matplotlib>=3.3.4
 scipy>=1.5.4
 shapely>=1.7.1
 datetime
+geopandas
+nbformat
+nbconvert
+ipykernel
+ipywidgets
+pyreadstat
