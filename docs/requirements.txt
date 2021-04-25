@@ -21,3 +21,4 @@ nbconvert
 ipykernel
 ipywidgets
 pyreadstat
+pre-commit
