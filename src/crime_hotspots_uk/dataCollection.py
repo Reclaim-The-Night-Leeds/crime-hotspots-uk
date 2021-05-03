@@ -9,6 +9,10 @@ from tqdm.auto import trange, tqdm
 
 import requests
 import json
+import numpy as np
+
+import os
+from pathlib import Path
 
 from datetime import date, timedelta
 
@@ -112,7 +116,7 @@ class Reclaim:
         # Create a list to hold all the crime data once its downloaded
         crimes = []
 
-        # Loop through all the constituincies
+        # Loop through all the areas
         for area in tqdm(self.locations.locations.index, desc="Areas"):
             for polygon in tqdm(
                 self.locations.locations["shapes"][area], desc="Polygons", leave=False
@@ -120,7 +124,7 @@ class Reclaim:
                 # Get the crimes for the current Area
                 temp = self.get_crimes(
                     polygon.exterior.coords,
-                    self.locations.locations["Constituincy Name"][area],
+                    self.locations.locations["Name"][area],
                 )
 
                 # If the data that is retrieved is a dataframe then append it
@@ -134,15 +138,15 @@ class Reclaim:
         # If you have reached here the function was executed successfully
         return True
 
-    def get_crimes(self, coords, constituincy):
+    def get_crimes(self, coords, name):
         """Download all crimes of a specific type within a boundary
 
         :param coords: A two deep list containing latitude and longitude
             coordinate pairs
         :type coords: list
-        :param constituincy: The name of the constituincy the data is for, this
+        :param name: The name of the area the data is for, this
             name will be appended as a column to the output dataframe to ensure
-            that each constituincy can be selected individualy
+            that each area can be selected individualy
         :type coords: string
 
         :return: Returns either a pandas dataframe if the data retireval was
@@ -164,8 +168,8 @@ class Reclaim:
         location = location[:-1]
 
         # Set the start and end date fo the request
-        start_date = date(2018, 3, 1)  # start date
-        end_date = date(2021, 2, 1)  # end date
+        start_date = date(2018, 4, 1)  # start date
+        end_date = date(2021, 3, 1)  # end date
 
         # Create a list of dates that can be added to the API request
         dates = (
@@ -241,11 +245,11 @@ class Reclaim:
             # Create a pretty name that is easily readable
             # Example: `On or near Hyde Park Place - Leeds North West`
             crimes["pretty name"] = (
-                crimes["location.street.name"] + " - " + str(constituincy)
+                crimes["location.street.name"] + " - " + str(name)
             )
 
-            # Add a column with the constituincy that the data is from
-            crimes["constituincy"] = str(constituincy)
+            # Add a column with the name of the area that the data is from
+            crimes["area name"] = str(name)
             crimes["Type"] = "Street"
 
             # Reset the index to number all entries from 0 to length of the data
@@ -264,7 +268,7 @@ class Reclaim:
         used for multiple locations. For instance `On or near bus stop` doesn't
         tell us which bus stop it was near. This function takes the provided
         latitude and longitude coordinates and identifies which locale with a
-        definitive name in the local constituincy is closest.
+        definitive name in the local area is closest.
 
         :raise AssertionError: This error is raised if a location name can't be
              correctly mapped to a street because there was no points close
@@ -273,15 +277,15 @@ class Reclaim:
         """
 
         # Create a global list of all possible locations in the UK, this
-        # contains the street name, latitude, longitude, constuincy and a
-        # pretty name made up of the street name and constituincy. Note that
-        # one street can appear in two constituincies
+        # contains the street name, latitude, longitude, area name and a
+        # pretty name made up of the street name and area. Note that
+        # one street can appear in two areas
         self.global_locales = self.all_crimes[
             [
                 "location.street.name",
                 "location.latitude",
                 "location.longitude",
-                "constituincy",
+                "area name",
                 "pretty name",
             ]
         ]
@@ -306,7 +310,7 @@ class Reclaim:
         street_id_loc = modified_crimes.columns.get_loc("location.street.name")
         latitude_id_loc = modified_crimes.columns.get_loc("location.latitude")
         longitude_id_loc = modified_crimes.columns.get_loc("location.longitude")
-        constituincy_id_loc = modified_crimes.columns.get_loc("constituincy")
+        area_name_id_loc = modified_crimes.columns.get_loc("area name")
         pretty_id_loc = modified_crimes.columns.get_loc("pretty name")
         type_id_loc = modified_crimes.columns.get_loc("Type")
 
@@ -320,15 +324,15 @@ class Reclaim:
                 # If the current street contains a non descriptive name then
                 if x in street:
 
-                    # Get the name of the constituincy of the current street
-                    constituincy = modified_crimes.iloc[i][constituincy_id_loc]
+                    # Get the name of the area of the current street
+                    area_name = modified_crimes.iloc[i][area_name_id_loc]
 
                     # Create a truth mask of which of the global locales
-                    # constituincies match the current constituincy
-                    mask = self.global_locales["constituincy"] == constituincy
+                    # areas match the current area
+                    mask = self.global_locales["area name"] == area_name
 
                     # Create a list off possible locations based on all other
-                    # locations in the same constituincy using the mask
+                    # locations in the same area using the mask
                     locales = self.global_locales.loc[mask]
 
                     # Get the local latitude and logntitude values from the data
@@ -375,7 +379,7 @@ class Reclaim:
                     # Get the name of the new street and create the new pretty
                     # name
                     new_street = locales.iloc[min_distance_index][0]
-                    pretty_name = new_street + " - " + constituincy
+                    pretty_name = new_street + " - " + area_name
 
                     # Set the names in the crimes dataframe to the new names
                     self.all_crimes.iat[i, pretty_id_loc] = pretty_name
@@ -444,7 +448,9 @@ class Reclaim:
 
         # Create a barplot of the hotspots
         fig, ax = plt.subplots(figsize=(40, 40))
-
+        
+        
+        
         # Create the title of the chart depending on if it is crime or stop and
         # search data
         if self.usage == "crimes-street":
@@ -460,7 +466,7 @@ class Reclaim:
         else:
             title = (
                 "Number of stop and searches at locations within "
-                + str(location)
+                + str(self.location.title)
                 + " since 2018, top "
                 + str(top)
                 + " locations"
