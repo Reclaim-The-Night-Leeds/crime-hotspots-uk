@@ -9,10 +9,6 @@ from tqdm.auto import trange, tqdm
 
 import requests
 import json
-import numpy as np
-
-import os
-from pathlib import Path
 
 from datetime import date, timedelta
 
@@ -244,9 +240,7 @@ class Reclaim:
 
             # Create a pretty name that is easily readable
             # Example: `On or near Hyde Park Place - Leeds North West`
-            crimes["pretty name"] = (
-                crimes["location.street.name"] + " - " + str(name)
-            )
+            crimes["pretty name"] = crimes["location.street.name"] + " - " + str(name)
 
             # Add a column with the name of the area that the data is from
             crimes["area name"] = str(name)
@@ -448,9 +442,14 @@ class Reclaim:
 
         # Create a barplot of the hotspots
         fig, ax = plt.subplots(figsize=(40, 40))
-        
-        
-        
+        sns.barplot(
+            y=self.hotspots["locations"],
+            x="frequency",
+            ax=ax,
+            data=self.hotspots,
+            orient="h",
+        )
+
         # Create the title of the chart depending on if it is crime or stop and
         # search data
         if self.usage == "crimes-street":
