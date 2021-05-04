@@ -589,7 +589,25 @@ class Reclaim:
 
                     file_name = directory + "/" + str(month) + ".csv"
 
-                    self.all_crimes[final_mask].to_csv(file_name)
+                    self.all_crimes[final_mask].to_csv(file_name, index=False)
+
+    def import_cache(self, location_type, area, crime_type, month):
+        file_name = os.path.expanduser(
+            "~/.crime_hotspots_cache/"
+            + location_type
+            + "/"
+            + area
+            + "/"
+            + crime_type
+            + "/"
+            + month
+            + ".csv"
+        )
+        if Path(file_name).is_file():
+            data = pd.read_csv(file_name)
+            return data
+        else:
+            return None
 
 
 class locations_not_fixed_yet(Exception):
