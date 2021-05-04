@@ -284,6 +284,10 @@ class Reclaim:
             # Reset the index to number all entries from 0 to length of the data
             crimes.reset_index(inplace=True, drop=True)
 
+            crimes["location.street.name"] = crimes["location.street.name"].str.replace(
+                "On or near", ""
+            )
+
             # Return the dataframe of crimes
             return crimes
 
