@@ -10,6 +10,10 @@ from tqdm.auto import trange, tqdm
 import requests
 import json
 
+import os
+import numpy as np
+from pathlib import Path
+
 from datetime import date, timedelta
 
 import seaborn as sns
@@ -551,3 +555,35 @@ class Reclaim:
         if type(polygon) == Polygon:
             polygon = MultiPolygon([polygon])
         return polygon
+
+    def cache_data(self):
+
+        location_type = self.locations.__name__
+
+        cache = os.path.expanduser("~/.crime_hotspots_cache/" + location_type)
+
+        areas = np.unique(self.all_crimes["area name"])
+
+        crime_types = np.unique(self.all_crimes["category"])
+
+        for area in areas:
+            area_mask = self.all_crimes["area name"] == area
+
+            for crime_type in crime_types:
+                type_mask = self.all_crimes["category"] == crime_type
+
+                months = np.unique(self.all_crimes["month"])
+
+                directory = cache + "/" + area + "/" + crime_type
+                Path(directory).mkdir(parents=True, exist_ok=True)
+
+                for month in months:
+                    month_mask = self.all_crimes["month"] == month
+
+                    final_mask = area_mask & type_mask & month_mask
+
+                    file_name = directory + "/" + str(month) + ".csv"
+
+                    self.all_crimes[final_mask].to_csv(file_name)
+
+        print(cache)
