@@ -586,4 +586,13 @@ class Reclaim:
 
                     self.all_crimes[final_mask].to_csv(file_name)
 
-        print(cache)
+
+class locations_not_fixed_yet(Exception):
+    """Exception raised when a function that should only be run after the crime data
+    location data has been fixed to ensure readable place names are used instead of
+    generic identifiers.
+    """
+
+    def __init__(self, message="Locations have not been fixed yet"):
+        self.message = message
+        super().__init__(self.message)
