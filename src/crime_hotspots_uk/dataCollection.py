@@ -180,60 +180,91 @@ class Reclaim:
 
         # Create an empty list to hold the returned JSONS of the crime data
         crime_jsons = []
+        imports = []
 
         # Loop through the list of dates
         for current_date in tqdm(dates, leave=False, desc="Months"):
-            # Generate the URL to be sent by using the URL gen function
-            url = self.url_gen(location, current_date)
+            imported = self.import_cache(
+                self.locations.__name__,
+                name,
+                self.crime_types[self.crime_type],
+                current_date,
+            )
 
-            # No payload or headers are required for the request
-            payload = {}
-            headers = {}
+            if imported is None:
 
-            # The police API only accepts requests shorter than 4096 characters
-            if len(url) > 4096:
-                print("url too long")
-                return
+                # Generate the URL to be sent by using the URL gen function
+                url = self.url_gen(location, current_date)
 
-            # Send the request and save the response
-            response = requests.request("GET", url, headers=headers, data=payload)
+                # No payload or headers are required for the request
+                payload = {}
+                headers = {}
 
-            # Check to see if the response code was correct (200), if it wasn't
-            # print out a warning message and return NONE
-            if response.status_code == 404:
-                print("-" * 10)
-                print("ERROR: response code 404, page not found")
-                print("URL was:", url)
-                print(
-                    "This error probably means a cosntant variable has been spelt incorrectly"  # noqa: E501
-                )
-                return
-            elif response.status_code == 429:
-                print("-" * 10)
-                print("ERROR: response code 429, too many requests")
-                print("URL was:", url)
-                print("Doccumentation at: https://data.police.uk/docs/api-call-limits/")
-                return
-            elif response.status_code == 503:
-                print("-" * 10)
-                print("ERROR: response code 503, more than 10,000 crimes in area")
-                print("URL was:", url)
-                print(
-                    "Doccumentation at: https://data.police.uk/docs/method/crime-street/"  # noqa: E501
-                )
-                return
-            elif response.status_code == 200:
-                # If the response code was 200 add the JSON ro the list of data
-                crime_jsons.append(json_normalize(json.loads(response.text)))
+                # The police API only accepts requests shorter than 4096 characters
+                if len(url) > 4096:
+                    print("url too long")
+                    return
+
+                # Send the request and save the response
+                response = requests.request("GET", url, headers=headers, data=payload)
+
+                # Check to see if the response code was correct (200), if it wasn't
+                # print out a warning message and return NONE
+                if response.status_code == 404:
+                    print("-" * 10)
+                    print("ERROR: response code 404, page not found")
+                    print("URL was:", url)
+                    print(
+                        "This error probably means a cosntant variable has been spelt incorrectly"  # noqa: E501
+                    )
+                    return
+                elif response.status_code == 429:
+                    print("-" * 10)
+                    print("ERROR: response code 429, too many requests")
+                    print("URL was:", url)
+                    print(
+                        "Doccumentation at: https://data.police.uk/docs/api-call-limits/"  # noqa: E501
+                    )
+                    return
+                elif response.status_code == 503:
+                    print("-" * 10)
+                    print("ERROR: response code 503, more than 10,000 crimes in area")
+                    print("URL was:", url)
+                    print(
+                        "Doccumentation at: https://data.police.uk/docs/method/crime-street/"  # noqa: E501
+                    )
+                    return
+                elif response.status_code == 200:
+                    # If the response code was 200 add the JSON ro the list of data
+                    crime_jsons.append(json_normalize(json.loads(response.text)))
+                else:
+                    print("-" * 10)
+                    print("ERROR: unkown response code")
+                    print("URL was:", url)
+                    print("response code: ", response.status_code)
+                    return
             else:
-                print("-" * 10)
-                print("ERROR: unkown response code")
-                print("URL was:", url)
-                print("response code: ", response.status_code)
-                return
+                imports.append(imported)
 
         # Convert the list of data to a dataframe
-        crimes = pd.concat(crime_jsons)
+        if len(crime_jsons) > 0:
+            crimes_downloaded = pd.concat(crime_jsons)
+        else:
+            crimes_downloaded = None
+
+        if len(imports) > 0:
+            crimes_imported = pd.concat(imports)
+        else:
+            crimes_imported = None
+
+        if crimes_downloaded is None and crimes_imported is None:
+            return
+        elif crimes_downloaded is None and crimes_imported is not None:
+            crimes = crimes_imported
+        elif crimes_downloaded is not None and crimes_imported is None:
+            crimes = crimes_downloaded
+        else:
+            crimes = pd.concat([crimes_downloaded, crimes_imported])
 
         # If data was found ensure the dataframe is formatted correctly, if not
         # return NONE
