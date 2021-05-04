@@ -558,6 +558,11 @@ class Reclaim:
 
     def cache_data(self):
 
+        try:
+            self.global_locales.empty
+        except AttributeError:
+            raise locations_not_fixed_yet
+
         location_type = self.locations.__name__
 
         cache = os.path.expanduser("~/.crime_hotspots_cache/" + location_type)
