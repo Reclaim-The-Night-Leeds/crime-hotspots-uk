@@ -15,6 +15,7 @@ import numpy as np
 from pathlib import Path
 
 from datetime import date, timedelta
+import dateutil
 
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -173,8 +174,8 @@ class Reclaim:
         location = location[:-1]
 
         # Set the start and end date fo the request
-        start_date = date(2018, 5, 1)  # start date
-        end_date = date(2021, 3, 1)  # end date
+        end_date = date.today()  # end date
+        start_date = end_date - dateutil.relativedelta.relativedelta(months=37)
 
         # Create a list of dates that can be added to the API request
         dates = (
