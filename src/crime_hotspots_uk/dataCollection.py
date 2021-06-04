@@ -174,7 +174,7 @@ class Reclaim:
         location = location[:-1]
 
         # Set the start and end date fo the request
-        end_date = date.today()  # end date
+        end_date = date.today() - dateutil.relativedelta.relativedelta(months=1)
         start_date = end_date - dateutil.relativedelta.relativedelta(months=37)
 
         # Create a list of dates that can be added to the API request
@@ -216,39 +216,11 @@ class Reclaim:
 
                 # Check to see if the response code was correct (200), if it wasn't
                 # print out a warning message and return NONE
-                if response.status_code == 404:
-                    print("-" * 10)
-                    print("ERROR: response code 404, page not found")
-                    print("URL was:", url)
-                    print(
-                        "This error probably means a cosntant variable has been spelt incorrectly"  # noqa: E501
-                    )
-                    return
-                elif response.status_code == 429:
-                    print("-" * 10)
-                    print("ERROR: response code 429, too many requests")
-                    print("URL was:", url)
-                    print(
-                        "Doccumentation at: https://data.police.uk/docs/api-call-limits/"  # noqa: E501
-                    )
-                    return
-                elif response.status_code == 503:
-                    print("-" * 10)
-                    print("ERROR: response code 503, more than 10,000 crimes in area")
-                    print("URL was:", url)
-                    print(
-                        "Doccumentation at: https://data.police.uk/docs/method/crime-street/"  # noqa: E501
-                    )
-                    return
-                elif response.status_code == 200:
+                if response.status_code != 200:
+                    raise http_error_code(response.status_code)
+                else:
                     # If the response code was 200 add the JSON ro the list of data
                     crime_jsons.append(json_normalize(json.loads(response.text)))
-                else:
-                    print("-" * 10)
-                    print("ERROR: unkown response code")
-                    print("URL was:", url)
-                    print("response code: ", response.status_code)
-                    return
             else:
                 imports.append(imported)
 
@@ -710,4 +682,50 @@ class locations_not_fixed_yet(Exception):
 
     def __init__(self, message="Locations have not been fixed yet"):
         self.message = message
+        super().__init__(self.message)
+
+
+class http_error_code(Exception):
+    """Exception raised when a function that should only be run after the crime data
+    location data has been fixed to ensure readable place names are used instead of
+    generic identifiers.
+    """
+
+    def __init__(self, code, url):
+        if code == 404:
+            message = (
+                "ERROR: response code 404, page not found\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "This error probably means a cosntant variable has been spelt incorrectly"  # noqa: E501
+            )
+            self.message = message
+        elif code == 429:
+            message = (
+                "ERROR: response code 429, too many requests\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "Doccumentation at: https://data.police.uk/docs/api-call-limits/"
+            )
+            self.message = message
+        elif code == 503:
+            message = (
+                "ERROR: response code 503, more than 10,000 crimes in area\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "Doccumentation at: https://data.police.uk/docs/api-call-limits/"
+            )
+        else:
+            message = (
+                "ERROR: unkown response code\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "response code: "
+                + str(code)
+            )
+
         super().__init__(self.message)
