@@ -32,6 +32,8 @@ from crime_hotspots_uk.constants import (
 )
 from crime_hotspots_uk.locations.constituincy import Constituincy
 
+from pyreadstat import write_sav
+
 
 class Reclaim:
     """This class handles all downloading and processing of the data."""
@@ -680,6 +682,17 @@ class Reclaim:
 
         self.mappings = pd.concat([self.mappings, new_cols], axis=1)
         return self.mappings
+
+    def export(self, name, file_type):
+        file_path = os.path.expanduser("~/")
+        file_path = file_path + "/" + name
+
+        if file_type == "csv":
+            self.all_crimes.to_csv(file_path)
+        elif file_type == "sav":
+            temp = self.all_crimes
+            temp.columns = [col.replace(" ", "_") for col in temp.columns]
+            write_sav(temp, file_path)
 
 
 class locations_not_fixed_yet(Exception):
