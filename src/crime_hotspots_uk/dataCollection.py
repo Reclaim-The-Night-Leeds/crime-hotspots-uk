@@ -266,6 +266,10 @@ class Reclaim:
                 "On or near ", ""
             )
 
+            # make sure that both search and crime have a category column
+            if self.usage == "stops-street":
+                crimes.rename(columns={"object_of_search": "category"}, inplace=True)
+
             # Return the dataframe of crimes
             return crimes
 
@@ -539,6 +543,10 @@ class Reclaim:
 
     def cache_data(self):
 
+        if self.usage == "stops-street":
+            print("Caching is not yet supported for stop and search data")
+            return
+
         try:
             self.global_locales.empty
         except AttributeError:
@@ -550,13 +558,13 @@ class Reclaim:
 
         areas = np.unique(self.all_crimes["area name"])
 
-        crime_types = np.unique(self.all_crimes["category"])
+        crime_types = np.unique(self.all_crimes["category"].astype(str))
 
         for area in areas:
             area_mask = self.all_crimes["area name"] == area
 
             for crime_type in crime_types:
-                type_mask = self.all_crimes["category"] == crime_type
+                type_mask = self.all_crimes["category"].astype(str) == crime_type
 
                 months = np.unique(self.all_crimes["month"])
 
