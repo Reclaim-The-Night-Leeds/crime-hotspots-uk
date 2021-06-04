@@ -75,6 +75,7 @@ class Reclaim:
         self.locations = location_type(location_names, name)
         temp = self.locations.locations["shapes"].apply(self.fix_polygons)
         self.locations.locations["shapes"] = temp
+        self.locations.locations.reset_index(drop=True, inplace=True)
 
         # Update the local list of potential crime types by pulling from
         # https://data.police.uk/docs/method/crime-categories/
@@ -119,7 +120,9 @@ class Reclaim:
         # Loop through all the areas
         for area in tqdm(self.locations.locations.index, desc="Areas"):
             for polygon in tqdm(
-                self.locations.locations["shapes"][area], desc="Polygons", leave=False
+                self.locations.locations["shapes"].iloc[area],
+                desc="Polygons",
+                leave=False,
             ):
                 # Get the crimes for the current Area
                 temp = self.get_crimes(
@@ -131,6 +134,8 @@ class Reclaim:
                 # to the list of crime dataframes
                 if isinstance(temp, pd.DataFrame):
                     crimes.append(temp)
+                else:
+                    print("No incidents found")
 
         # Convert the list of crime dataframes to one big dataframe
         self.all_crimes = pd.concat(crimes)
@@ -168,7 +173,7 @@ class Reclaim:
         location = location[:-1]
 
         # Set the start and end date fo the request
-        start_date = date(2018, 4, 1)  # start date
+        start_date = date(2018, 5, 1)  # start date
         end_date = date(2021, 3, 1)  # end date
 
         # Create a list of dates that can be added to the API request
@@ -184,6 +189,7 @@ class Reclaim:
 
         # Loop through the list of dates
         for current_date in tqdm(dates, leave=False, desc="Months"):
+
             imported = self.import_cache(
                 self.locations.__name__,
                 name,
@@ -192,7 +198,6 @@ class Reclaim:
             )
 
             if imported is None:
-
                 # Generate the URL to be sent by using the URL gen function
                 url = self.url_gen(location, current_date)
 
@@ -201,7 +206,7 @@ class Reclaim:
                 headers = {}
 
                 # The police API only accepts requests shorter than 4096 characters
-                if len(url) > 4096:
+                if len(url) > 4094:
                     print("url too long")
                     return
 
@@ -285,7 +290,7 @@ class Reclaim:
             crimes.reset_index(inplace=True, drop=True)
 
             crimes["location.street.name"] = crimes["location.street.name"].str.replace(
-                "On or near", ""
+                "On or near ", ""
             )
 
             # Return the dataframe of crimes
@@ -308,6 +313,8 @@ class Reclaim:
              enough.
 
         """
+
+        self.create_mappings()
 
         # Create a global list of all possible locations in the UK, this
         # contains the street name, latitude, longitude, area name and a
@@ -362,57 +369,23 @@ class Reclaim:
 
                     # Create a truth mask of which of the global locales
                     # areas match the current area
-                    mask = self.global_locales["area name"] == area_name
-
-                    # Create a list off possible locations based on all other
-                    # locations in the same area using the mask
-                    locales = self.global_locales.loc[mask]
+                    area_mask = self.mappings["area name"] == area_name
 
                     # Get the local latitude and logntitude values from the data
                     street_lat = modified_crimes.iloc[i][latitude_id_loc]
                     street_lon = modified_crimes.iloc[i][longitude_id_loc]
 
-                    # Set a really high value for the minimum distance between
-                    # points, as the program calculates distances betwen the
-                    # street and the possilbe locales this will be updated to
-                    # represent what the smallest distance is
-                    min_distance = 1000000
+                    lat_mask = self.mappings["location.latitude"] == street_lat
+                    lon_mask = self.mappings["location.longitude"] == street_lon
 
-                    # Set the index to -1 so we know if no nearby locale was
-                    # found
-                    min_distance_index = -1
-
-                    # Loop through all possible locales
-                    for j in range(0, locales.shape[0]):
-                        # Get the latitude and longitude of the current
-                        # candidate locale
-                        locale_lat = locales.iloc[j][1]
-                        locale_lon = locales.iloc[j][2]
-
-                        # Calculate the difference between the current street
-                        # and the candidate locale
-                        lat_diff = street_lat - locale_lat
-                        lon_diff = street_lon - locale_lon
-
-                        # Calculate the difference between the two points
-                        # TODO: Change this to the haversine formula
-                        distance = sqrt((lat_diff) ** 2 + (lon_diff) ** 2)
-
-                        # If the distance is the smalles so far
-                        if distance < min_distance:
-                            # Update the minimum distance and the index
-                            min_distance = distance
-                            min_distance_index = j
-
-                    # Check if no locale closer than 1000000 was found
-                    if min_distance_index < 0:
-                        print(street)
-                        print(x)
+                    mask = area_mask & lat_mask & lon_mask
 
                     # Get the name of the new street and create the new pretty
                     # name
-                    new_street = locales.iloc[min_distance_index][0]
-                    pretty_name = new_street + " - " + area_name
+                    new_street = self.mappings[mask]["new name"].reset_index(drop=True)[
+                        0
+                    ]
+                    pretty_name = street + " - " + new_street + " - " + area_name
 
                     # Set the names in the crimes dataframe to the new names
                     self.all_crimes.iat[i, pretty_id_loc] = pretty_name
@@ -614,7 +587,7 @@ class Reclaim:
 
                 months = np.unique(self.all_crimes["month"])
 
-                directory = cache + "/" + area + "/" + crime_type
+                directory = cache + "/" + area + "/" + self.usage + "/" + crime_type
                 Path(directory).mkdir(parents=True, exist_ok=True)
 
                 for month in months:
@@ -643,6 +616,89 @@ class Reclaim:
             return data
         else:
             return None
+
+    def create_mappings(self):
+        self.mappings = (
+            self.all_crimes.groupby(
+                [
+                    "location.latitude",
+                    "location.longitude",
+                    "location.street.name",
+                    "area name",
+                ]
+            )
+            .size()
+            .reset_index()
+        )
+
+        street_id_loc = self.mappings.columns.get_loc("location.street.name")
+        latitude_id_loc = self.mappings.columns.get_loc("location.latitude")
+        longitude_id_loc = self.mappings.columns.get_loc("location.longitude")
+
+        mask = self.mappings["location.street.name"].str.match("|".join(ignore))
+        locales = self.mappings[~mask].reset_index(drop=True)
+
+        new_cols = []
+
+        for row in trange(0, self.mappings.shape[0]):
+
+            if self.mappings.iloc[row, street_id_loc] in ignore:
+                # create a new mapping
+                # Get the local latitude and logntitude values from the data
+                street_lat = self.mappings.iloc[row, latitude_id_loc]
+                street_lon = self.mappings.iloc[row, longitude_id_loc]
+
+                if row == 145:
+                    print("Here")
+
+                # Set a really high value for the minimum distance between
+                # points, as the program calculates distances betwen the
+                # street and the possilbe locales this will be updated to
+                # represent what the smallest distance is
+                min_distance = 1000000
+
+                # Set the index to -1 so we know if no nearby locale was
+                # found
+                min_distance_index = -1
+
+                for temp_row in range(0, locales.shape[0]):
+                    # Get the latitude and longitude of the current
+                    # candidate locale
+                    locale_lat = locales.iloc[temp_row, latitude_id_loc]
+                    locale_lon = locales.iloc[temp_row, longitude_id_loc]
+
+                    # Calculate the difference between the current street
+                    # and the candidate locale
+
+                    lat_diff = street_lat - locale_lat
+                    lon_diff = street_lon - locale_lon
+
+                    # Calculate the difference between the two points
+                    # TODO: Change this to the haversine formula
+                    distance = sqrt((lat_diff) ** 2 + (lon_diff) ** 2)
+
+                    # If the distance is the smalles so far
+                    if distance < min_distance:
+                        # Update the minimum distance and the index
+                        min_distance = distance
+                        min_distance_index = temp_row
+
+                if min_distance_index > -1:
+                    temp = [locales.iloc[min_distance_index, street_id_loc]]
+                else:
+                    print("No match found within bounds")
+                    temp = ["DEADBEEF"]
+                new_cols.append(temp)
+
+            else:
+                # copy across the name so its on the new name column as well
+                temp = [self.mappings.iloc[row, street_id_loc]]
+                new_cols.append(temp)
+
+        new_cols = pd.DataFrame(new_cols, columns=["new name"])
+
+        self.mappings = pd.concat([self.mappings, new_cols], axis=1)
+        return self.mappings
 
 
 class locations_not_fixed_yet(Exception):
