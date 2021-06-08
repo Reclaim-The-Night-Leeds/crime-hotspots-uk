@@ -196,8 +196,8 @@ class Root:
             imported = self.import_cache(
                 self.locations.__name__,
                 name,
-                self.crime_types[self.crime_type],
                 current_date,
+                self.crime_types[self.crime_type],
             )
 
             if imported is None:
@@ -267,10 +267,6 @@ class Root:
             crimes["location.street.name"] = crimes["location.street.name"].str.replace(
                 "On or near ", ""
             )
-
-            # make sure that both search and crime have a category column
-            if self.usage == "stops-street":
-                crimes.rename(columns={"object_of_search": "category"}, inplace=True)
 
             # Return the dataframe of crimes
             return crimes
@@ -546,10 +542,6 @@ class Root:
 
     def cache_data(self):
 
-        if self.usage == "stops-street":
-            print("Caching is not yet supported for stop and search data")
-            return
-
         try:
             self.global_locales.empty
         except AttributeError:
@@ -583,19 +575,24 @@ class Root:
 
                     self.all_crimes[final_mask].to_csv(file_name, index=False)
 
-    def import_cache(self, location_type, area, crime_type, month):
+    def import_cache(self, location_type, area, month, category=None):
         file_name = os.path.expanduser(
             "~/.crime_hotspots_cache/"
             + location_type
             + "/"
             + area
             + "/"
-            + crime_type
+            + "crimes-street"
+            + "/"
+            + category
             + "/"
             + month
             + ".csv"
         )
+
+        print(file_name)
         if Path(file_name).is_file():
+            print("importing")
             data = pd.read_csv(file_name)
             return data
         else:
