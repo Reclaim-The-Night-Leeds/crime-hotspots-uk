@@ -35,7 +35,7 @@ from crime_hotspots_uk.locations.constituincy import Constituincy
 from pyreadstat import write_sav
 
 
-class Reclaim:
+class Root:
     """This class handles all downloading and processing of the data."""
 
     def __init__(
@@ -382,10 +382,11 @@ class Reclaim:
             say the data is from
         :type location: string
         :param location_type: Type of location to make the graph for, must be a
-             list of location types, each entry must be either `Street` or
+            list of location types, each entry must be either `Street` or
             value in the ignore list in constants.py. You can also pass `All`
             to select all crimes. The default value is `All`
         :type location_type: list (optional)
+
         """
 
         # Check if fix locations has been run yet, this graph only produces
