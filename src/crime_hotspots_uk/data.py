@@ -10,7 +10,12 @@ from tqdm.auto import trange, tqdm
 import requests
 import json
 
+import os
+import numpy as np
+from pathlib import Path
+
 from datetime import date, timedelta
+import dateutil
 
 import seaborn as sns
 from matplotlib import pyplot as plt
@@ -27,8 +32,10 @@ from crime_hotspots_uk.constants import (
 )
 from crime_hotspots_uk.locations.constituincy import Constituincy
 
+from pyreadstat import write_sav
 
-class Reclaim:
+
+class Root:
     """This class handles all downloading and processing of the data."""
 
     def __init__(
@@ -71,6 +78,7 @@ class Reclaim:
         self.locations = location_type(location_names, name)
         temp = self.locations.locations["shapes"].apply(self.fix_polygons)
         self.locations.locations["shapes"] = temp
+        self.locations.locations.reset_index(drop=True, inplace=True)
 
         # Update the local list of potential crime types by pulling from
         # https://data.police.uk/docs/method/crime-categories/
@@ -112,21 +120,25 @@ class Reclaim:
         # Create a list to hold all the crime data once its downloaded
         crimes = []
 
-        # Loop through all the constituincies
+        # Loop through all the areas
         for area in tqdm(self.locations.locations.index, desc="Areas"):
             for polygon in tqdm(
-                self.locations.locations["shapes"][area], desc="Polygons", leave=False
+                self.locations.locations["shapes"].iloc[area],
+                desc="Polygons",
+                leave=False,
             ):
                 # Get the crimes for the current Area
                 temp = self.get_crimes(
                     polygon.exterior.coords,
-                    self.locations.locations["Constituincy Name"][area],
+                    self.locations.locations["Name"][area],
                 )
 
                 # If the data that is retrieved is a dataframe then append it
                 # to the list of crime dataframes
                 if isinstance(temp, pd.DataFrame):
                     crimes.append(temp)
+                else:
+                    print("No incidents found")
 
         # Convert the list of crime dataframes to one big dataframe
         self.all_crimes = pd.concat(crimes)
@@ -134,15 +146,15 @@ class Reclaim:
         # If you have reached here the function was executed successfully
         return True
 
-    def get_crimes(self, coords, constituincy):
+    def get_crimes(self, coords, name):
         """Download all crimes of a specific type within a boundary
 
         :param coords: A two deep list containing latitude and longitude
             coordinate pairs
         :type coords: list
-        :param constituincy: The name of the constituincy the data is for, this
+        :param name: The name of the area the data is for, this
             name will be appended as a column to the output dataframe to ensure
-            that each constituincy can be selected individualy
+            that each area can be selected individualy
         :type coords: string
 
         :return: Returns either a pandas dataframe if the data retireval was
@@ -164,8 +176,8 @@ class Reclaim:
         location = location[:-1]
 
         # Set the start and end date fo the request
-        start_date = date(2018, 3, 1)  # start date
-        end_date = date(2021, 2, 1)  # end date
+        end_date = date.today() - dateutil.relativedelta.relativedelta(months=1)
+        start_date = end_date - dateutil.relativedelta.relativedelta(months=37)
 
         # Create a list of dates that can be added to the API request
         dates = (
@@ -176,60 +188,63 @@ class Reclaim:
 
         # Create an empty list to hold the returned JSONS of the crime data
         crime_jsons = []
+        imports = []
 
         # Loop through the list of dates
         for current_date in tqdm(dates, leave=False, desc="Months"):
-            # Generate the URL to be sent by using the URL gen function
-            url = self.url_gen(location, current_date)
 
-            # No payload or headers are required for the request
-            payload = {}
-            headers = {}
+            imported = self.import_cache(
+                self.locations.__name__,
+                name,
+                current_date,
+                self.crime_types[self.crime_type],
+            )
 
-            # The police API only accepts requests shorter than 4096 characters
-            if len(url) > 4096:
-                print("url too long")
-                return
+            if imported is None:
+                # Generate the URL to be sent by using the URL gen function
+                url = self.url_gen(location, current_date)
 
-            # Send the request and save the response
-            response = requests.request("GET", url, headers=headers, data=payload)
+                # No payload or headers are required for the request
+                payload = {}
+                headers = {}
 
-            # Check to see if the response code was correct (200), if it wasn't
-            # print out a warning message and return NONE
-            if response.status_code == 404:
-                print("-" * 10)
-                print("ERROR: response code 404, page not found")
-                print("URL was:", url)
-                print(
-                    "This error probably means a cosntant variable has been spelt incorrectly"  # noqa: E501
-                )
-                return
-            elif response.status_code == 429:
-                print("-" * 10)
-                print("ERROR: response code 429, too many requests")
-                print("URL was:", url)
-                print("Doccumentation at: https://data.police.uk/docs/api-call-limits/")
-                return
-            elif response.status_code == 503:
-                print("-" * 10)
-                print("ERROR: response code 503, more than 10,000 crimes in area")
-                print("URL was:", url)
-                print(
-                    "Doccumentation at: https://data.police.uk/docs/method/crime-street/"  # noqa: E501
-                )
-                return
-            elif response.status_code == 200:
-                # If the response code was 200 add the JSON ro the list of data
-                crime_jsons.append(json_normalize(json.loads(response.text)))
+                # The police API only accepts requests shorter than 4096 characters
+                if len(url) > 4094:
+                    print("url too long")
+                    return
+
+                # Send the request and save the response
+                response = requests.request("GET", url, headers=headers, data=payload)
+
+                # Check to see if the response code was correct (200), if it wasn't
+                # print out a warning message and return NONE
+                if response.status_code != 200:
+                    raise http_error_code(response.status_code)
+                else:
+                    # If the response code was 200 add the JSON ro the list of data
+                    crime_jsons.append(json_normalize(json.loads(response.text)))
             else:
-                print("-" * 10)
-                print("ERROR: unkown response code")
-                print("URL was:", url)
-                print("response code: ", response.status_code)
-                return
+                imports.append(imported)
 
         # Convert the list of data to a dataframe
-        crimes = pd.concat(crime_jsons)
+        if len(crime_jsons) > 0:
+            crimes_downloaded = pd.concat(crime_jsons)
+        else:
+            crimes_downloaded = None
+
+        if len(imports) > 0:
+            crimes_imported = pd.concat(imports)
+        else:
+            crimes_imported = None
+
+        if crimes_downloaded is None and crimes_imported is None:
+            return
+        elif crimes_downloaded is None and crimes_imported is not None:
+            crimes = crimes_imported
+        elif crimes_downloaded is not None and crimes_imported is None:
+            crimes = crimes_downloaded
+        else:
+            crimes = pd.concat([crimes_downloaded, crimes_imported])
 
         # If data was found ensure the dataframe is formatted correctly, if not
         # return NONE
@@ -240,16 +255,18 @@ class Reclaim:
 
             # Create a pretty name that is easily readable
             # Example: `On or near Hyde Park Place - Leeds North West`
-            crimes["pretty name"] = (
-                crimes["location.street.name"] + " - " + str(constituincy)
-            )
+            crimes["pretty name"] = crimes["location.street.name"] + " - " + str(name)
 
-            # Add a column with the constituincy that the data is from
-            crimes["constituincy"] = str(constituincy)
+            # Add a column with the name of the area that the data is from
+            crimes["area name"] = str(name)
             crimes["Type"] = "Street"
 
             # Reset the index to number all entries from 0 to length of the data
             crimes.reset_index(inplace=True, drop=True)
+
+            crimes["location.street.name"] = crimes["location.street.name"].str.replace(
+                "On or near ", ""
+            )
 
             # Return the dataframe of crimes
             return crimes
@@ -264,7 +281,7 @@ class Reclaim:
         used for multiple locations. For instance `On or near bus stop` doesn't
         tell us which bus stop it was near. This function takes the provided
         latitude and longitude coordinates and identifies which locale with a
-        definitive name in the local constituincy is closest.
+        definitive name in the local area is closest.
 
         :raise AssertionError: This error is raised if a location name can't be
              correctly mapped to a street because there was no points close
@@ -272,16 +289,18 @@ class Reclaim:
 
         """
 
+        self.create_mappings()
+
         # Create a global list of all possible locations in the UK, this
-        # contains the street name, latitude, longitude, constuincy and a
-        # pretty name made up of the street name and constituincy. Note that
-        # one street can appear in two constituincies
+        # contains the street name, latitude, longitude, area name and a
+        # pretty name made up of the street name and area. Note that
+        # one street can appear in two areas
         self.global_locales = self.all_crimes[
             [
                 "location.street.name",
                 "location.latitude",
                 "location.longitude",
-                "constituincy",
+                "area name",
                 "pretty name",
             ]
         ]
@@ -306,7 +325,7 @@ class Reclaim:
         street_id_loc = modified_crimes.columns.get_loc("location.street.name")
         latitude_id_loc = modified_crimes.columns.get_loc("location.latitude")
         longitude_id_loc = modified_crimes.columns.get_loc("location.longitude")
-        constituincy_id_loc = modified_crimes.columns.get_loc("constituincy")
+        area_name_id_loc = modified_crimes.columns.get_loc("area name")
         pretty_id_loc = modified_crimes.columns.get_loc("pretty name")
         type_id_loc = modified_crimes.columns.get_loc("Type")
 
@@ -320,62 +339,28 @@ class Reclaim:
                 # If the current street contains a non descriptive name then
                 if x in street:
 
-                    # Get the name of the constituincy of the current street
-                    constituincy = modified_crimes.iloc[i][constituincy_id_loc]
+                    # Get the name of the area of the current street
+                    area_name = modified_crimes.iloc[i][area_name_id_loc]
 
                     # Create a truth mask of which of the global locales
-                    # constituincies match the current constituincy
-                    mask = self.global_locales["constituincy"] == constituincy
-
-                    # Create a list off possible locations based on all other
-                    # locations in the same constituincy using the mask
-                    locales = self.global_locales.loc[mask]
+                    # areas match the current area
+                    area_mask = self.mappings["area name"] == area_name
 
                     # Get the local latitude and logntitude values from the data
                     street_lat = modified_crimes.iloc[i][latitude_id_loc]
                     street_lon = modified_crimes.iloc[i][longitude_id_loc]
 
-                    # Set a really high value for the minimum distance between
-                    # points, as the program calculates distances betwen the
-                    # street and the possilbe locales this will be updated to
-                    # represent what the smallest distance is
-                    min_distance = 1000000
+                    lat_mask = self.mappings["location.latitude"] == street_lat
+                    lon_mask = self.mappings["location.longitude"] == street_lon
 
-                    # Set the index to -1 so we know if no nearby locale was
-                    # found
-                    min_distance_index = -1
-
-                    # Loop through all possible locales
-                    for j in range(0, locales.shape[0]):
-                        # Get the latitude and longitude of the current
-                        # candidate locale
-                        locale_lat = locales.iloc[j][1]
-                        locale_lon = locales.iloc[j][2]
-
-                        # Calculate the difference between the current street
-                        # and the candidate locale
-                        lat_diff = street_lat - locale_lat
-                        lon_diff = street_lon - locale_lon
-
-                        # Calculate the difference between the two points
-                        # TODO: Change this to the haversine formula
-                        distance = sqrt((lat_diff) ** 2 + (lon_diff) ** 2)
-
-                        # If the distance is the smalles so far
-                        if distance < min_distance:
-                            # Update the minimum distance and the index
-                            min_distance = distance
-                            min_distance_index = j
-
-                    # Check if no locale closer than 1000000 was found
-                    if min_distance_index < 0:
-                        print(street)
-                        print(x)
+                    mask = area_mask & lat_mask & lon_mask
 
                     # Get the name of the new street and create the new pretty
                     # name
-                    new_street = locales.iloc[min_distance_index][0]
-                    pretty_name = new_street + " - " + constituincy
+                    new_street = self.mappings[mask]["new name"].reset_index(drop=True)[
+                        0
+                    ]
+                    pretty_name = street + " - " + new_street + " - " + area_name
 
                     # Set the names in the crimes dataframe to the new names
                     self.all_crimes.iat[i, pretty_id_loc] = pretty_name
@@ -393,10 +378,11 @@ class Reclaim:
             say the data is from
         :type location: string
         :param location_type: Type of location to make the graph for, must be a
-             list of location types, each entry must be either `Street` or
+            list of location types, each entry must be either `Street` or
             value in the ignore list in constants.py. You can also pass `All`
             to select all crimes. The default value is `All`
         :type location_type: list (optional)
+
         """
 
         # Check if fix locations has been run yet, this graph only produces
@@ -444,6 +430,13 @@ class Reclaim:
 
         # Create a barplot of the hotspots
         fig, ax = plt.subplots(figsize=(40, 40))
+        sns.barplot(
+            y=self.hotspots["locations"],
+            x="frequency",
+            ax=ax,
+            data=self.hotspots,
+            orient="h",
+        )
 
         # Create the title of the chart depending on if it is crime or stop and
         # search data
@@ -460,7 +453,7 @@ class Reclaim:
         else:
             title = (
                 "Number of stop and searches at locations within "
-                + str(location)
+                + str(self.location.title)
                 + " since 2018, top "
                 + str(top)
                 + " locations"
@@ -546,3 +539,210 @@ class Reclaim:
         if type(polygon) == Polygon:
             polygon = MultiPolygon([polygon])
         return polygon
+
+    def cache_data(self):
+
+        try:
+            self.global_locales.empty
+        except AttributeError:
+            raise locations_not_fixed_yet
+
+        location_type = self.locations.__name__
+
+        cache = os.path.expanduser("~/.crime_hotspots_cache/" + location_type)
+
+        areas = np.unique(self.all_crimes["area name"])
+
+        crime_types = np.unique(self.all_crimes["category"].astype(str))
+
+        for area in areas:
+            area_mask = self.all_crimes["area name"] == area
+
+            for crime_type in crime_types:
+                type_mask = self.all_crimes["category"].astype(str) == crime_type
+
+                months = np.unique(self.all_crimes["month"])
+
+                directory = cache + "/" + area + "/" + self.usage + "/" + crime_type
+                Path(directory).mkdir(parents=True, exist_ok=True)
+
+                for month in months:
+                    month_mask = self.all_crimes["month"] == month
+
+                    final_mask = area_mask & type_mask & month_mask
+
+                    file_name = directory + "/" + str(month) + ".csv"
+
+                    self.all_crimes[final_mask].to_csv(file_name, index=False)
+
+    def import_cache(self, location_type, area, month, category=None):
+        file_name = os.path.expanduser(
+            "~/.crime_hotspots_cache/"
+            + location_type
+            + "/"
+            + area
+            + "/"
+            + "crimes-street"
+            + "/"
+            + category
+            + "/"
+            + month
+            + ".csv"
+        )
+
+        if Path(file_name).is_file():
+            data = pd.read_csv(file_name)
+            return data
+        else:
+            return None
+
+    def create_mappings(self):
+        self.mappings = (
+            self.all_crimes.groupby(
+                [
+                    "location.latitude",
+                    "location.longitude",
+                    "location.street.name",
+                    "area name",
+                ]
+            )
+            .size()
+            .reset_index()
+        )
+
+        street_id_loc = self.mappings.columns.get_loc("location.street.name")
+        latitude_id_loc = self.mappings.columns.get_loc("location.latitude")
+        longitude_id_loc = self.mappings.columns.get_loc("location.longitude")
+
+        mask = self.mappings["location.street.name"].str.match("|".join(ignore))
+        locales = self.mappings[~mask].reset_index(drop=True)
+
+        new_cols = []
+
+        for row in trange(0, self.mappings.shape[0]):
+
+            if self.mappings.iloc[row, street_id_loc] in ignore:
+                # create a new mapping
+                # Get the local latitude and logntitude values from the data
+                street_lat = self.mappings.iloc[row, latitude_id_loc]
+                street_lon = self.mappings.iloc[row, longitude_id_loc]
+
+                if row == 145:
+                    print("Here")
+
+                # Set a really high value for the minimum distance between
+                # points, as the program calculates distances betwen the
+                # street and the possilbe locales this will be updated to
+                # represent what the smallest distance is
+                min_distance = 1000000
+
+                # Set the index to -1 so we know if no nearby locale was
+                # found
+                min_distance_index = -1
+
+                for temp_row in range(0, locales.shape[0]):
+                    # Get the latitude and longitude of the current
+                    # candidate locale
+                    locale_lat = locales.iloc[temp_row, latitude_id_loc]
+                    locale_lon = locales.iloc[temp_row, longitude_id_loc]
+
+                    # Calculate the difference between the current street
+                    # and the candidate locale
+
+                    lat_diff = street_lat - locale_lat
+                    lon_diff = street_lon - locale_lon
+
+                    # Calculate the difference between the two points
+                    # TODO: Change this to the haversine formula
+                    distance = sqrt((lat_diff) ** 2 + (lon_diff) ** 2)
+
+                    # If the distance is the smalles so far
+                    if distance < min_distance:
+                        # Update the minimum distance and the index
+                        min_distance = distance
+                        min_distance_index = temp_row
+
+                if min_distance_index > -1:
+                    temp = [locales.iloc[min_distance_index, street_id_loc]]
+                else:
+                    print("No match found within bounds")
+                    temp = ["DEADBEEF"]
+                new_cols.append(temp)
+
+            else:
+                # copy across the name so its on the new name column as well
+                temp = [self.mappings.iloc[row, street_id_loc]]
+                new_cols.append(temp)
+
+        new_cols = pd.DataFrame(new_cols, columns=["new name"])
+
+        self.mappings = pd.concat([self.mappings, new_cols], axis=1)
+        return self.mappings
+
+    def export(self, name, file_type):
+        file_path = os.path.expanduser("~/")
+        file_path = file_path + "/" + name
+
+        if file_type == "csv":
+            self.all_crimes.to_csv(file_path)
+        elif file_type == "sav":
+            temp = self.all_crimes
+            temp.columns = [col.replace(" ", "_") for col in temp.columns]
+            write_sav(temp, file_path)
+
+
+class locations_not_fixed_yet(Exception):
+    """Exception raised when a function that should only be run after the crime data
+    location data has been fixed to ensure readable place names are used instead of
+    generic identifiers.
+    """
+
+    def __init__(self, message="Locations have not been fixed yet"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class http_error_code(Exception):
+    """Exception raised when a function that should only be run after the crime data
+    location data has been fixed to ensure readable place names are used instead of
+    generic identifiers.
+    """
+
+    def __init__(self, code, url):
+        if code == 404:
+            message = (
+                "ERROR: response code 404, page not found\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "This error probably means a cosntant variable has been spelt incorrectly"  # noqa: E501
+            )
+            self.message = message
+        elif code == 429:
+            message = (
+                "ERROR: response code 429, too many requests\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "Doccumentation at: https://data.police.uk/docs/api-call-limits/"
+            )
+            self.message = message
+        elif code == 503:
+            message = (
+                "ERROR: response code 503, more than 10,000 crimes in area\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "Doccumentation at: https://data.police.uk/docs/api-call-limits/"
+            )
+        else:
+            message = (
+                "ERROR: unkown response code\n"
+                + "URL was:"
+                + url
+                + "\n"
+                + "response code: "
+                + str(code)
+            )
+
+        super().__init__(self.message)

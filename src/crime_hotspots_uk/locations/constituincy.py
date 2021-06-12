@@ -40,3 +40,16 @@ class Constituincy(generic.Locations):
 
         # Concatanate the dataframes into one big dataframe of all the areas
         self.locations = pd.concat(self.locations)
+        
+        self.locations.columns = ['ID',
+                                  'Name',
+                                  'Representative ID',
+                                  'Representative Name',
+                                  'Affiliation',
+                                  'Gender',
+                                  'Status',
+                                  'Start Date',
+                                  'shapes']
+        
+        self.__name__ = 'Constituincy'
+        
