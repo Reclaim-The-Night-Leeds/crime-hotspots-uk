@@ -5,6 +5,7 @@ crime_categories_url = "https://data.police.uk/api/crime-categories?date=2020-08
 
 ignore = [
     "Sports/Recreation Area",
+    "Sports/recreation Area",
     "Parking Area",
     "Park/Open Space",
     "Supermarket",
