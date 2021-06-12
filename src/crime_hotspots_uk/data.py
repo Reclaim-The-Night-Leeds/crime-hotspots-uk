@@ -590,9 +590,7 @@ class Root:
             + ".csv"
         )
 
-        print(file_name)
         if Path(file_name).is_file():
-            print("importing")
             data = pd.read_csv(file_name)
             return data
         else:
