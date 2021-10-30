@@ -25,5 +25,5 @@ ignore = [
     "Theme/Adventure Park",
     "Prison",
     "Race Track",
-    "Motorway Service Area",
+    "Motorway Service Area"
 ]

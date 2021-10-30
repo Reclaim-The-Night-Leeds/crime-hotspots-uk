@@ -417,8 +417,6 @@ class Root:
             location_type.append("Street")
 
         search = "|".join(location_type)
-        print("List of locations: ", location_type)
-        print("Search term: ", search)
         # Create a mask of all the crimes that happened at the
         # given location type
         mask = self.all_crimes["Type"].str.contains(search)
