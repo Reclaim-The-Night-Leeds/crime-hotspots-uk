@@ -1,1 +1,0 @@
-/home/george/OneDrive/Documents/abuseAwarenessSociety/crimeData/crime-hotspots-uk/LICENSE.rst
