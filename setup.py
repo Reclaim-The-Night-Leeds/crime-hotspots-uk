@@ -35,7 +35,7 @@ if __name__ == "__main__":
         # This is the name of the package
         name="chuk",
         # The initial release version
-        version="0.0.1",
+        version="0.0.2",
         # Full name of the author
         author="Reclaim The Night Leeds",
         # Email of the author
