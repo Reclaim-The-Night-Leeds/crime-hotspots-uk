@@ -1,6 +1,6 @@
-from crime_hotspots_uk.data import Root, locations_not_fixed_yet
+from .chuk import Root, locations_not_fixed_yet
 
-from crime_hotspots_uk.locations.constituincy import Constituincy
+from .locations.constituincy import Constituincy
 
 import pandas as pd
 

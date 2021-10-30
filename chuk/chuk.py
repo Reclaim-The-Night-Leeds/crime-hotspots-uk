@@ -1,7 +1,8 @@
 """
 This module is used to download and analyse data from the data.police.uk API.
 """
-
+from multiprocessing import Pool
+from functools import partial
 import pandas as pd
 from pandas import json_normalize
 
@@ -25,12 +26,12 @@ from math import sqrt
 
 from shapely.geometry import Polygon, box, MultiPolygon
 
-from crime_hotspots_uk.constants import (
+from .constants import (
     baseURL,
     crime_categories_url,
     ignore,
 )
-from crime_hotspots_uk.locations.constituincy import Constituincy
+from .locations.constituincy import Constituincy
 
 from pyreadstat import write_sav
 
@@ -189,6 +190,7 @@ class Root:
         # Create an empty list to hold the returned JSONS of the crime data
         crime_jsons = []
         imports = []
+        fail_count = 0
 
         # Loop through the list of dates
         for current_date in tqdm(dates, leave=False, desc="Months"):
@@ -214,17 +216,23 @@ class Root:
                     return
 
                 # Send the request and save the response
-                response = requests.request("GET", url, headers=headers, data=payload)
+                response = requests.request(
+                    "GET", url, headers=headers, data=payload)
 
                 # Check to see if the response code was correct (200), if it wasn't
                 # print out a warning message and return NONE
-                if response.status_code != 200:
-                    raise http_error_code(response.status_code)
+                if response.status_code == 404:
+                    fail_count += 1
+                elif response.status_code != 200:
+                    raise http_error_code(response.status_code, url)
                 else:
                     # If the response code was 200 add the JSON ro the list of data
-                    crime_jsons.append(json_normalize(json.loads(response.text)))
+                    crime_jsons.append(json_normalize(
+                        json.loads(response.text)))
             else:
                 imports.append(imported)
+
+        print(f"Failed to import {fail_count} months")
 
         # Convert the list of data to a dataframe
         if len(crime_jsons) > 0:
@@ -250,12 +258,15 @@ class Root:
         # return NONE
         if crimes.shape[0] > 0:
             # Set the latitude and longitude to numeric values
-            crimes["location.latitude"] = pd.to_numeric(crimes["location.latitude"])
-            crimes["location.longitude"] = pd.to_numeric(crimes["location.longitude"])
+            crimes["location.latitude"] = pd.to_numeric(
+                crimes["location.latitude"])
+            crimes["location.longitude"] = pd.to_numeric(
+                crimes["location.longitude"])
 
             # Create a pretty name that is easily readable
             # Example: `On or near Hyde Park Place - Leeds North West`
-            crimes["pretty name"] = crimes["location.street.name"] + " - " + str(name)
+            crimes["pretty name"] = crimes["location.street.name"] + \
+                " - " + str(name)
 
             # Add a column with the name of the area that the data is from
             crimes["area name"] = str(name)
@@ -310,7 +321,8 @@ class Root:
         search = "|".join(ignore)
 
         # Create a truth table mask of which locations names are descriptive
-        mask = ~self.global_locales["location.street.name"].str.contains(search)
+        mask = ~self.global_locales["location.street.name"].str.contains(
+            search)
 
         # Apply the mask to the locales table and reset the index
         # We now have a list of all the descriptive street names which can
@@ -324,7 +336,8 @@ class Root:
         # Get the indexes of the columns of interest
         street_id_loc = modified_crimes.columns.get_loc("location.street.name")
         latitude_id_loc = modified_crimes.columns.get_loc("location.latitude")
-        longitude_id_loc = modified_crimes.columns.get_loc("location.longitude")
+        longitude_id_loc = modified_crimes.columns.get_loc(
+            "location.longitude")
         area_name_id_loc = modified_crimes.columns.get_loc("area name")
         pretty_id_loc = modified_crimes.columns.get_loc("pretty name")
         type_id_loc = modified_crimes.columns.get_loc("Type")
@@ -471,7 +484,8 @@ class Root:
             ax.text(
                 x=width + 1,  # x-coordinate position of data label
                 y=p.get_y() + (height / 2),  # y-coordinate position of data label
-                s="{:.0f}".format(width),  # data label, formatted to ignore decimals
+                # data label, formatted to ignore decimals
+                s="{:.0f}".format(width),
                 va="center",
             )  # sets vertical alignment (va) to center
 
@@ -531,7 +545,8 @@ class Root:
                 + str(date)
             )
         else:
-            url = baseURL + self.usage + "?poly=" + location + "&date=" + str(date)
+            url = baseURL + self.usage + "?poly=" + \
+                location + "&date=" + str(date)
 
         return url
 
@@ -559,7 +574,8 @@ class Root:
             area_mask = self.all_crimes["area name"] == area
 
             for crime_type in crime_types:
-                type_mask = self.all_crimes["category"].astype(str) == crime_type
+                type_mask = self.all_crimes["category"].astype(
+                    str) == crime_type
 
                 months = np.unique(self.all_crimes["month"])
 
@@ -596,6 +612,57 @@ class Root:
         else:
             return None
 
+    def _map_location(self, street_id_loc, latitude_id_loc, longitude_id_loc, locales, row):
+        if self.mappings.iloc[row, street_id_loc] in ignore:
+            # create a new mapping
+            # Get the local latitude and logntitude values from the data
+            street_lat = self.mappings.iloc[row, latitude_id_loc]
+            street_lon = self.mappings.iloc[row, longitude_id_loc]
+
+            # Set a really high value for the minimum distance between
+            # points, as the program calculates distances betwen the
+            # street and the possilbe locales this will be updated to
+            # represent what the smallest distance is
+            min_distance = 1000000
+
+            # Set the index to -1 so we know if no nearby locale was
+            # found
+            min_distance_index = -1
+
+            for temp_row in range(0, locales.shape[0]):
+                # Get the latitude and longitude of the current
+                # candidate locale
+                locale_lat = locales.iloc[temp_row, latitude_id_loc]
+                locale_lon = locales.iloc[temp_row, longitude_id_loc]
+
+                # Calculate the difference between the current street
+                # and the candidate locale
+
+                lat_diff = street_lat - locale_lat
+                lon_diff = street_lon - locale_lon
+
+                # Calculate the difference between the two points
+                # TODO: Change this to the haversine formula
+                distance = sqrt((lat_diff) ** 2 + (lon_diff) ** 2)
+
+                # If the distance is the smallest so far
+                if distance < min_distance:
+                    # Update the minimum distance and the index
+                    min_distance = distance
+                    min_distance_index = temp_row
+
+            if min_distance_index > -1:
+                temp = [locales.iloc[min_distance_index, street_id_loc]]
+            else:
+                print("No match found within bounds")
+                temp = ["DEADBEEF"]
+            return temp
+
+        else:
+            # copy across the name so its on the new name column as well
+            temp = [self.mappings.iloc[row, street_id_loc]]
+            return temp
+
     def create_mappings(self):
         self.mappings = (
             self.all_crimes.groupby(
@@ -614,65 +681,19 @@ class Root:
         latitude_id_loc = self.mappings.columns.get_loc("location.latitude")
         longitude_id_loc = self.mappings.columns.get_loc("location.longitude")
 
-        mask = self.mappings["location.street.name"].str.match("|".join(ignore))
+        mask = self.mappings["location.street.name"].str.match(
+            "|".join(ignore))
         locales = self.mappings[~mask].reset_index(drop=True)
 
         new_cols = []
 
-        for row in trange(0, self.mappings.shape[0]):
-
-            if self.mappings.iloc[row, street_id_loc] in ignore:
-                # create a new mapping
-                # Get the local latitude and logntitude values from the data
-                street_lat = self.mappings.iloc[row, latitude_id_loc]
-                street_lon = self.mappings.iloc[row, longitude_id_loc]
-
-                if row == 145:
-                    print("Here")
-
-                # Set a really high value for the minimum distance between
-                # points, as the program calculates distances betwen the
-                # street and the possilbe locales this will be updated to
-                # represent what the smallest distance is
-                min_distance = 1000000
-
-                # Set the index to -1 so we know if no nearby locale was
-                # found
-                min_distance_index = -1
-
-                for temp_row in range(0, locales.shape[0]):
-                    # Get the latitude and longitude of the current
-                    # candidate locale
-                    locale_lat = locales.iloc[temp_row, latitude_id_loc]
-                    locale_lon = locales.iloc[temp_row, longitude_id_loc]
-
-                    # Calculate the difference between the current street
-                    # and the candidate locale
-
-                    lat_diff = street_lat - locale_lat
-                    lon_diff = street_lon - locale_lon
-
-                    # Calculate the difference between the two points
-                    # TODO: Change this to the haversine formula
-                    distance = sqrt((lat_diff) ** 2 + (lon_diff) ** 2)
-
-                    # If the distance is the smalles so far
-                    if distance < min_distance:
-                        # Update the minimum distance and the index
-                        min_distance = distance
-                        min_distance_index = temp_row
-
-                if min_distance_index > -1:
-                    temp = [locales.iloc[min_distance_index, street_id_loc]]
-                else:
-                    print("No match found within bounds")
-                    temp = ["DEADBEEF"]
-                new_cols.append(temp)
-
-            else:
-                # copy across the name so its on the new name column as well
-                temp = [self.mappings.iloc[row, street_id_loc]]
-                new_cols.append(temp)
+        with Pool() as pool:
+            mapper = partial(self._map_location, street_id_loc,
+                             latitude_id_loc, longitude_id_loc, locales)
+            new_cols = list(
+                tqdm(pool.imap(mapper, range(0, self.mappings.shape[0])), total=self.mappings.shape[0]))
+            pool.close()
+            pool.join()
 
         new_cols = pd.DataFrame(new_cols, columns=["new name"])
 
@@ -680,15 +701,12 @@ class Root:
         return self.mappings
 
     def export(self, name, file_type):
-        file_path = os.path.expanduser("~/")
-        file_path = file_path + "/" + name
-
         if file_type == "csv":
-            self.all_crimes.to_csv(file_path)
+            self.all_crimes.to_csv(name)
         elif file_type == "sav":
             temp = self.all_crimes
             temp.columns = [col.replace(" ", "_") for col in temp.columns]
-            write_sav(temp, file_path)
+            write_sav(temp, name)
 
 
 class locations_not_fixed_yet(Exception):

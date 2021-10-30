@@ -1,6 +1,6 @@
-from crime_hotspots_uk.data import Root
+from .chuk import Root
 
-from crime_hotspots_uk.locations.constituincy import Constituincy
+from .locations.constituincy import Constituincy
 
 
 class Data(Root):

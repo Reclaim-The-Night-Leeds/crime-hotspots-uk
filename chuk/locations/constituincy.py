@@ -1,11 +1,11 @@
-from crime_hotspots_uk.locations import generic
+from . import locations
 
 from pyparliment.members.location import find
 
 import pandas as pd
 
 
-class Constituincy(generic.Locations):
+class Constituincy(locations.Locations):
     """
     This class is used to hold a dataframe of constituincy boundaries and any relevant
     data. Any data pertaining to a perticular constituincy including demographics or
@@ -40,7 +40,7 @@ class Constituincy(generic.Locations):
 
         # Concatanate the dataframes into one big dataframe of all the areas
         self.locations = pd.concat(self.locations)
-        
+
         self.locations.columns = ['ID',
                                   'Name',
                                   'Representative ID',
@@ -50,6 +50,5 @@ class Constituincy(generic.Locations):
                                   'Status',
                                   'Start Date',
                                   'shapes']
-        
+
         self.__name__ = 'Constituincy'
-        
