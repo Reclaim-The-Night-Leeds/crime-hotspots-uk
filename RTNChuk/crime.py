@@ -1,4 +1,4 @@
-from .chuk import Root
+from .RTNChuk import Root
 
 from .locations.constituincy import Constituincy
 

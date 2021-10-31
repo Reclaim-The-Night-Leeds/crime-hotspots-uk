@@ -33,7 +33,7 @@ if __name__ == "__main__":
     print(f"Packages are: {setuptools.find_packages()}")
     setuptools.setup(
         # This is the name of the package
-        name="chuk",
+        name="RTNChuk",
         # The initial release version
         version="0.0.2",
         # Full name of the author
@@ -55,7 +55,7 @@ if __name__ == "__main__":
         ],                                      # Information to filter the project on PyPi website
         python_requires='>=3.6',                # Minimum version requirement of the package
         # Name of the python package
-        py_modules=["chuk"],
+        py_modules=["RTNChuk"],
         # Directory of the source code of the package
         # package_dir={'.'},
         install_requires=["pyreadstat", "shapely", "matplotlib",

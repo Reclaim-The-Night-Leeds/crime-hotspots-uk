@@ -1,4 +1,4 @@
-from .chuk import Root, locations_not_fixed_yet
+from .RTNChuk import Root, locations_not_fixed_yet
 
 from .locations.constituincy import Constituincy
 
